@@ -8,6 +8,31 @@
 import { html, nothing } from "lit";
 import { icon, type IconName } from "../icons.js";
 
+/**
+ * Icon mapping for action types.
+ * Maps common icon names from backend to our IconName type.
+ * Provides a safe fallback for unknown icons.
+ */
+const ACTION_ICON_MAP: Record<string, IconName> = {
+  "brain": "brain",
+  "tool": "wrench",
+  "loader": "loader",
+  "monitor": "monitor",
+  "link": "link",
+  "zap": "zap",
+  "messageSquare": "messageSquare",
+  "x": "x",
+  "check": "check",
+  "search": "search",
+  "circle": "circle",
+  "activity": "zap",
+  "arrowDown": "messageSquare",
+  "arrowUp": "messageSquare",
+  "mouse": "monitor",
+};
+
+const DEFAULT_ICON: IconName = "circle";
+
 export interface ActionItemProps {
   action: {
     id: string;
@@ -83,27 +108,7 @@ export function renderActionItem(props: ActionItemProps) {
  * Render the icon for an action with appropriate styling based on status
  */
 function renderActionIcon(iconName: string, status: string) {
-  // Map common icon names from backend to our IconName type
-  // Use a safe fallback for unknown icons
-  const iconMap: Record<string, IconName> = {
-    "brain": "brain",
-    "tool": "wrench",
-    "loader": "loader",
-    "monitor": "monitor",
-    "link": "link",
-    "zap": "zap",
-    "messageSquare": "messageSquare",
-    "x": "x",
-    "check": "check",
-    "search": "search",
-    "circle": "circle",
-    "activity": "zap",
-    "arrowDown": "messageSquare",
-    "arrowUp": "messageSquare",
-    "mouse": "monitor",
-  };
-
-  const safeIconName: IconName = iconMap[iconName] || "circle";
+  const safeIconName: IconName = ACTION_ICON_MAP[iconName] ?? DEFAULT_ICON;
   return html`
     <span class="action-item__icon-wrap action-item__icon-wrap--${status}">
       ${icon(safeIconName)}

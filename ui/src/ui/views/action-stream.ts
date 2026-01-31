@@ -60,16 +60,16 @@ export interface TokenUsageData {
 export function renderActionStream(props: ActionStreamProps) {
   const { state } = props;
 
-  // Extract action stream state from AppViewState
-  const actions = (state as any).actionStreamActions || [];
-  const activeFilters = (state as any).actionStreamFilters || ['all'];
-  const actionStats = (state as any).actionStreamStats || { total: 0, byType: {} };
-  const tokenUsage = (state as any).actionStreamTokenUsage || { total: 0, limit: 100000, cost: 0 };
-  const showTokenMeter = (state as any).actionStreamShowTokenMeter || false;
-  const liveEnabled = (state as any).actionStreamLiveEnabled !== false;
-  const hasMoreActions = (state as any).actionStreamHasMore || false;
-  const loading = (state as any).actionStreamLoading || false;
-  const error = (state as any).actionStreamError || null;
+  // Extract action stream state from AppViewState (now properly typed)
+  const actions = state.actionStreamActions;
+  const activeFilters = state.actionStreamFilters;
+  const actionStats = state.actionStreamStats;
+  const tokenUsage = state.actionStreamTokenUsage;
+  const showTokenMeter = state.actionStreamShowTokenMeter;
+  const liveEnabled = state.actionStreamLiveEnabled;
+  const hasMoreActions = state.actionStreamHasMore;
+  const loading = state.actionStreamLoading;
+  const error = state.actionStreamError;
 
   return html`
     <div class="action-stream">
