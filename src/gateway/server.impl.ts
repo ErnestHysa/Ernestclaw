@@ -16,7 +16,14 @@ import {
 import { isDiagnosticsEnabled } from "../infra/diagnostic-events.js";
 import { logAcceptedEnvOption } from "../infra/env.js";
 import { applyPluginAutoEnable } from "../config/plugin-auto-enable.js";
-import { clearAgentRunContext, onAgentEvent } from "../infra/agent-events.js";
+import {
+  clearAgentRunContext,
+  onAgentEvent
+} from "../infra/agent-events.js";
+import {
+  getGlobalActionStreamAggregator,
+  initGlobalActionStreamAggregator,
+} from "../infra/action-stream.js";
 import { onHeartbeatEvent } from "../infra/heartbeat-events.js";
 import { startHeartbeatRunner } from "../infra/heartbeat-runner.js";
 import { getMachineDisplayName } from "../infra/machine-name.js";
@@ -87,6 +94,7 @@ const logReload = log.child("reload");
 const logHooks = log.child("hooks");
 const logPlugins = log.child("plugins");
 const logWsControl = log.child("ws");
+const logActionStream = log.child("action-stream");
 const canvasRuntime = runtimeForLogger(logCanvas);
 
 export type GatewayServer = {
@@ -410,6 +418,11 @@ export async function startGatewayServer(
   let heartbeatRunner = startHeartbeatRunner({ cfg: cfgAtStart });
 
   void cron.start().catch((err) => logCron.error(`failed to start: ${String(err)}`));
+
+  // Initialize action stream aggregator
+  const actionStreamAgg = initGlobalActionStreamAggregator();
+  actionStreamAgg.start();
+  logActionStream.info("action stream aggregator started");
 
   const execApprovalManager = new ExecApprovalManager();
   const execApprovalForwarder = createExecApprovalForwarder();
