@@ -82,6 +82,14 @@ const BASE_METHODS = [
   "chat.history",
   "chat.abort",
   "chat.send",
+  // Action stream methods
+  "actionstream.history",
+  "actionstream.stats",
+  "actionstream.runHistory",
+  "actionstream.subscribe",
+  "actionstream.unsubscribe",
+  "actionstream.pauseAgent",
+  "actionstream.injectCommand",
 ];
 
 export function listGatewayMethods(): string[] {
@@ -108,4 +116,5 @@ export const GATEWAY_EVENTS = [
   "voicewake.changed",
   "exec.approval.requested",
   "exec.approval.resolved",
+  "actionstream.event",
 ];

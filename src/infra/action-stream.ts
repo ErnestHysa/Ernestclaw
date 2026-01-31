@@ -151,28 +151,31 @@ export function createActionStreamAggregator(): ActionStreamAggregator {
         },
       });
     } else if (cronEvt.action === "finished") {
-      emitAction({
-        ...baseEvt,
-        type: "cron.finished",
-        data: {
-          jobId: cronEvt.jobId,
-          jobName: cronEvt.jobId,
-          status: cronEvt.status ?? "ok",
-          durationMs: cronEvt.durationMs ?? 0,
-          summary: cronEvt.summary,
-          outputText: cronEvt.summary,
-        },
-      });
-    } else if (cronEvt.action === "error") {
-      emitAction({
-        ...baseEvt,
-        type: "cron.error",
-        data: {
-          jobId: cronEvt.jobId,
-          jobName: cronEvt.jobId,
-          error: cronEvt.error ?? "Unknown error",
-        },
-      });
+      // Check if the finished event has an error status
+      if (cronEvt.status === "error") {
+        emitAction({
+          ...baseEvt,
+          type: "cron.error",
+          data: {
+            jobId: cronEvt.jobId,
+            jobName: cronEvt.jobId,
+            error: cronEvt.error ?? "Unknown error",
+          },
+        });
+      } else {
+        emitAction({
+          ...baseEvt,
+          type: "cron.finished",
+          data: {
+            jobId: cronEvt.jobId,
+            jobName: cronEvt.jobId,
+            status: cronEvt.status ?? "ok",
+            durationMs: cronEvt.durationMs ?? 0,
+            summary: cronEvt.summary,
+            outputText: cronEvt.summary,
+          },
+        });
+      }
     }
   };
 
