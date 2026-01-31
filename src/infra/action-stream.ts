@@ -8,6 +8,7 @@ import {
   initGlobalActionStreamStore
 } from "./action-stream-store.js";
 import { onAgentEvent } from "./agent-events.js";
+import { initGlobalTokenTracker } from "./token-tracker.js";
 
 export type BrowserScreenshotEvent = {
   screenshotPath: string;
@@ -193,6 +194,20 @@ export function createActionStreamAggregator(): ActionStreamAggregator {
   const recordTokenUsage: ActionStreamAggregator["recordTokenUsage"] = (evt) => {
     if (!running) return;
 
+    // Record to global token tracker for cost aggregation
+    const tokenTracker = initGlobalTokenTracker();
+    tokenTracker.recordUsage({
+      runId: evt.runId,
+      sessionKey: evt.sessionKey,
+      promptTokens: evt.promptTokens,
+      completionTokens: evt.completionTokens,
+      totalTokens: evt.totalTokens,
+      model: evt.model,
+      provider: evt.provider,
+      costUsd: evt.costUsd,
+    });
+
+    // Also emit as an action event for streaming
     emitAction({
       id: generateActionId(),
       type: "agent.tokens",
@@ -259,3 +274,7 @@ export function resetGlobalActionStreamAggregatorForTest(): void {
   }
   globalAggregator = null;
 }
+
+// Re-export token tracker functions for convenience
+export { initGlobalTokenTracker, getGlobalTokenTracker as getGlobalTokenUsageTracker, resetGlobalTokenTracker } from "./token-tracker.js";
+export type { TokenUsageRecord, UsageSummary, TokenTracker } from "./token-tracker.js";
