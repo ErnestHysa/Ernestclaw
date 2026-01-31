@@ -21,6 +21,9 @@ export type TokenUsageRecord = {
   costUsd?: number;
 };
 
+/** Internal type that tracks insertion order for stable sorting */
+type InternalTokenUsageRecord = TokenUsageRecord & { _insertionOrder: number };
+
 export type UsageSummary = {
   totalTokens: number;
   totalCost: number;
@@ -54,14 +57,13 @@ function calculateCost(
 }
 
 export function createTokenTracker(): TokenTracker {
-  const records = new Map<string, TokenUsageRecord>();
-  const runRecords = new Map<string, TokenUsageRecord[]>();
+  const records = new Map<string, InternalTokenUsageRecord>();
   // Track insertion order for stable sorting when timestamps are equal
   let insertionCounter = 0;
 
   const recordUsage: TokenTracker["recordUsage"] = (usage) => {
     const totalTokens = usage.totalTokens ?? usage.promptTokens + usage.completionTokens;
-    const record: TokenUsageRecord = {
+    const internalRecord: InternalTokenUsageRecord = {
       ...usage,
       totalTokens,
       timestamp: Date.now(),
@@ -71,18 +73,18 @@ export function createTokenTracker(): TokenTracker {
         usage.promptTokens,
         usage.completionTokens
       ),
+      _insertionOrder: insertionCounter++,
     };
 
-    records.set(record.runId, { ...record, _insertionOrder: insertionCounter++ } as TokenUsageRecord & { _insertionOrder: number });
-
-    if (!runRecords.has(record.runId)) {
-      runRecords.set(record.runId, []);
-    }
-    runRecords.get(record.runId)!.push(record);
+    records.set(internalRecord.runId, internalRecord);
   };
 
   const getUsageForRun: TokenTracker["getUsageForRun"] = (runId) => {
-    return records.get(runId);
+    const internalRecord = records.get(runId);
+    if (!internalRecord) return undefined;
+    // Return a clean TokenUsageRecord without the internal _insertionOrder property
+    const { _insertionOrder, ...record } = internalRecord;
+    return record;
   };
 
   const getUsageByProvider: TokenTracker["getUsageByProvider"] = () => {
@@ -120,17 +122,19 @@ export function createTokenTracker(): TokenTracker {
         const timeDiff = b.timestamp - a.timestamp;
         if (timeDiff !== 0) return timeDiff;
         // Then by insertion order descending (most recent first)
-        const aOrder = (a as TokenUsageRecord & { _insertionOrder?: number })._insertionOrder ?? 0;
-        const bOrder = (b as TokenUsageRecord & { _insertionOrder?: number })._insertionOrder ?? 0;
-        return bOrder - aOrder;
+        return b._insertionOrder - a._insertionOrder;
       })
       .slice(0, limit)
-      .map(([, record]) => record);
+      .map(([, internalRecord]) => {
+        // Return clean TokenUsageRecord without the internal _insertionOrder property
+        const { _insertionOrder, ...record } = internalRecord;
+        return record;
+      });
   };
 
   const clear: TokenTracker["clear"] = () => {
     records.clear();
-    runRecords.clear();
+    insertionCounter = 0;
   };
 
   return {
