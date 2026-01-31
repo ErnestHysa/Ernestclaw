@@ -24,6 +24,7 @@ import {
 import { jsonError, toBoolean, toNumber, toStringOrEmpty } from "./utils.js";
 import type { BrowserRouteRegistrar } from "./types.js";
 import { getGlobalActionStreamAggregator } from "../../infra/action-stream.js";
+import { DEFAULT_BROWSER_SCREENSHOT_JPEG_QUALITY } from "../screenshot.js";
 
 export function registerBrowserAgentSnapshotRoutes(
   app: BrowserRouteRegistrar,
@@ -118,7 +119,7 @@ export function registerBrowserAgentSnapshotRoutes(
           wsUrl: tab.wsUrl ?? "",
           fullPage,
           format: type,
-          quality: type === "jpeg" ? 85 : undefined,
+          quality: type === "jpeg" ? DEFAULT_BROWSER_SCREENSHOT_JPEG_QUALITY : undefined,
         });
       }
 

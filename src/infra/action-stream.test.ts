@@ -100,6 +100,98 @@ describe("ActionStreamAggregator", () => {
     expect(action.data.screenshotPath).toBe("/media/screenshot.jpg");
   });
 
+  it("should emit browser screenshot with full metadata", () => {
+    const captured: unknown[] = [];
+    aggregator.onAction((evt) => captured.push(evt));
+
+    aggregator.start();
+
+    aggregator.handleBrowserScreenshot({
+      screenshotPath: "/media/screenshot-123.jpg",
+      thumbnailPath: undefined,
+      url: "https://example.com",
+      targetId: "tab_abc123",
+      fullPage: false,
+      width: 1920,
+      height: 1080,
+    });
+
+    expect(captured.length).toBe(1);
+    const action = captured[0] as {
+      type: string;
+      id: string;
+      timestamp: number;
+      data: {
+        screenshotPath: string;
+        thumbnailPath?: string;
+        url?: string;
+        targetId?: string;
+        fullPage?: boolean;
+        width?: number;
+        height?: number;
+      };
+    };
+    expect(action.type).toBe("browser.screenshot");
+    expect(action.id).toMatch(/^act_\d+_[a-z0-9]+$/);
+    expect(action.timestamp).toBeGreaterThan(0);
+    expect(action.data.screenshotPath).toBe("/media/screenshot-123.jpg");
+    expect(action.data.url).toBe("https://example.com");
+    expect(action.data.targetId).toBe("tab_abc123");
+    expect(action.data.fullPage).toBe(false);
+    expect(action.data.width).toBe(1920);
+    expect(action.data.height).toBe(1080);
+  });
+
+  it("should emit browser screenshot with minimal fields", () => {
+    const captured: unknown[] = [];
+    aggregator.onAction((evt) => captured.push(evt));
+
+    aggregator.start();
+
+    aggregator.handleBrowserScreenshot({
+      screenshotPath: "/media/screenshot-minimal.jpg",
+    });
+
+    expect(captured.length).toBe(1);
+    const action = captured[0] as { type: string; data: { screenshotPath: string } };
+    expect(action.type).toBe("browser.screenshot");
+    expect(action.data.screenshotPath).toBe("/media/screenshot-minimal.jpg");
+  });
+
+  it("should not emit browser screenshot when aggregator is stopped", () => {
+    const captured: unknown[] = [];
+    aggregator.onAction((evt) => captured.push(evt));
+
+    // Don't start the aggregator
+
+    aggregator.handleBrowserScreenshot({
+      screenshotPath: "/media/screenshot.jpg",
+    });
+
+    expect(captured.length).toBe(0);
+  });
+
+  it("should include thumbnail path when provided", () => {
+    const captured: unknown[] = [];
+    aggregator.onAction((evt) => captured.push(evt));
+
+    aggregator.start();
+
+    aggregator.handleBrowserScreenshot({
+      screenshotPath: "/media/screenshot.jpg",
+      thumbnailPath: "/media/thumb.jpg",
+      url: "https://example.com",
+    });
+
+    expect(captured.length).toBe(1);
+    const action = captured[0] as {
+      type: string;
+      data: { screenshotPath: string; thumbnailPath?: string };
+    };
+    expect(action.data.screenshotPath).toBe("/media/screenshot.jpg");
+    expect(action.data.thumbnailPath).toBe("/media/thumb.jpg");
+  });
+
   it("should track token usage", () => {
     const captured: unknown[] = [];
     aggregator.onAction((evt) => captured.push(evt));
