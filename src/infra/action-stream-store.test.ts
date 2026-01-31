@@ -166,4 +166,27 @@ describe("ActionStreamStore", () => {
     expect(run1Events).toHaveLength(2);
     expect(run1Events.every((e) => e.runId === "run_1")).toBe(true);
   });
+
+  it("should update existing event without changing insertion order", () => {
+    store.add({
+      id: "act_1",
+      type: "agent.tool",
+      timestamp: 1000,
+      runId: "run_1",
+      data: { phase: "start", toolName: "test" }
+    });
+
+    store.add({
+      id: "act_1", // Same ID
+      type: "agent.tool",
+      timestamp: 2000, // Different data
+      runId: "run_1",
+      data: { phase: "result", toolName: "test", result: "done" }
+    });
+
+    const retrieved = store.get("act_1");
+    expect(retrieved?.timestamp).toBe(2000); // Updated
+    expect(retrieved?.data).toEqual({ phase: "result", toolName: "test", result: "done" });
+    expect(store.getAll()).toHaveLength(1); // No duplicate
+  });
 });

@@ -35,8 +35,10 @@ export function createActionStreamStore(opts: ActionStreamStoreOpts = {}): Actio
   const listeners = new Set<(evt: ActionStreamEvent) => void>();
 
   const add: ActionStreamStore["add"] = (evt) => {
+    const isNewEvent = !events.has(evt.id);
+
     // If we're at max size and this is a new event, remove oldest
-    if (!events.has(evt.id) && events.size >= maxSize) {
+    if (isNewEvent && events.size >= maxSize) {
       const oldestId = insertionOrder.shift();
       if (oldestId) {
         events.delete(oldestId);
@@ -44,7 +46,7 @@ export function createActionStreamStore(opts: ActionStreamStoreOpts = {}): Actio
     }
 
     events.set(evt.id, evt);
-    if (!insertionOrder.includes(evt.id)) {
+    if (isNewEvent) {
       insertionOrder.push(evt.id);
     }
 
