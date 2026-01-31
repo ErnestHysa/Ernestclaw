@@ -115,6 +115,7 @@ export function getSlashCommands(options: SlashCommandOptions = {}): SlashComman
     { name: "new", description: "Reset the session" },
     { name: "reset", description: "Reset the session" },
     { name: "settings", description: "Open settings" },
+    { name: "stream", description: "Live action stream (God View)" },
     { name: "exit", description: "Exit the TUI" },
     { name: "quit", description: "Exit the TUI" },
   ];
@@ -154,6 +155,7 @@ export function helpText(options: SlashCommandOptions = {}): string {
     "/new or /reset",
     "/abort",
     "/settings",
+    "/stream",
     "/exit",
   ].join("\n");
 }
