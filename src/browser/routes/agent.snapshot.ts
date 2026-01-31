@@ -1,6 +1,7 @@
 import path from "node:path";
 
 import { ensureMediaDir, saveMediaBuffer } from "../../media/store.js";
+import { getImageMetadata } from "../../media/image-ops.js";
 import { captureScreenshot, snapshotAria } from "../cdp.js";
 import {
   DEFAULT_AI_SNAPSHOT_EFFICIENT_DEPTH,
@@ -22,6 +23,7 @@ import {
 } from "./agent.shared.js";
 import { jsonError, toBoolean, toNumber, toStringOrEmpty } from "./utils.js";
 import type { BrowserRouteRegistrar } from "./types.js";
+import { getGlobalActionStreamAggregator } from "../../infra/action-stream.js";
 
 export function registerBrowserAgentSnapshotRoutes(
   app: BrowserRouteRegistrar,
@@ -131,6 +133,22 @@ export function registerBrowserAgentSnapshotRoutes(
         "browser",
         DEFAULT_BROWSER_SCREENSHOT_MAX_BYTES,
       );
+
+      // Emit screenshot event to action stream
+      const meta = await getImageMetadata(normalized.buffer);
+      const aggregator = getGlobalActionStreamAggregator();
+      if (aggregator) {
+        aggregator.handleBrowserScreenshot({
+          screenshotPath: path.resolve(saved.path),
+          thumbnailPath: undefined,
+          url: tab.url,
+          targetId: tab.targetId,
+          fullPage,
+          width: meta?.width,
+          height: meta?.height,
+        });
+      }
+
       res.json({
         ok: true,
         path: path.resolve(saved.path),
@@ -253,6 +271,22 @@ export function registerBrowserAgentSnapshotRoutes(
             DEFAULT_BROWSER_SCREENSHOT_MAX_BYTES,
           );
           const imageType = normalized.contentType?.includes("jpeg") ? "jpeg" : "png";
+
+          // Emit labeled screenshot event to action stream
+          const meta = await getImageMetadata(normalized.buffer);
+          const aggregator = getGlobalActionStreamAggregator();
+          if (aggregator) {
+            aggregator.handleBrowserScreenshot({
+              screenshotPath: path.resolve(saved.path),
+              thumbnailPath: undefined,
+              url: tab.url,
+              targetId: tab.targetId,
+              fullPage: false,
+              width: meta?.width,
+              height: meta?.height,
+            });
+          }
+
           return res.json({
             ok: true,
             format,
