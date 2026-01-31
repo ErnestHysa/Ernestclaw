@@ -10,6 +10,34 @@ import {
 } from "../../infra/action-stream.js";
 import { formatActionForDisplay } from "../../infra/action-stream-types.js";
 
+// Constants for action stream configuration
+const DEFAULT_HISTORY_LIMIT = 50;
+const MAX_HISTORY_LIMIT = 500;
+const STATS_RECENT_WINDOW_MS = 5 * 60 * 1000; // 5 minutes
+
+// Type-safe parameter interfaces
+interface ActionStreamHistoryParams {
+  types?: ActionType[];
+  runId?: string;
+  sessionKey?: string;
+  afterMs?: number;
+  beforeMs?: number;
+  limit?: number;
+}
+
+interface ActionStreamRunHistoryParams {
+  runId?: string;
+}
+
+interface ActionStreamPauseAgentParams {
+  runId?: string;
+}
+
+interface ActionStreamInjectCommandParams {
+  runId?: string;
+  command?: string;
+}
+
 // Track subscribed clients for real-time broadcasts
 const subscribedClients = new Set<string>();
 
@@ -64,28 +92,29 @@ export const actionStreamHandlers: GatewayRequestHandlers = {
       const filter: ActionStreamFilter = {};
 
       if (typeof params === "object" && params !== null) {
-        if (Array.isArray((params as any).types)) {
-          filter.types = (params as any).types as ActionType[];
+        const typedParams = params as ActionStreamHistoryParams;
+        if (Array.isArray(typedParams.types)) {
+          filter.types = typedParams.types;
         }
-        if (typeof (params as any).runId === "string") {
-          filter.runId = (params as any).runId;
+        if (typeof typedParams.runId === "string") {
+          filter.runId = typedParams.runId;
         }
-        if (typeof (params as any).sessionKey === "string") {
-          filter.sessionKey = (params as any).sessionKey;
+        if (typeof typedParams.sessionKey === "string") {
+          filter.sessionKey = typedParams.sessionKey;
         }
-        if (typeof (params as any).afterMs === "number") {
-          filter.afterMs = (params as any).afterMs;
+        if (typeof typedParams.afterMs === "number") {
+          filter.afterMs = typedParams.afterMs;
         }
-        if (typeof (params as any).beforeMs === "number") {
-          filter.beforeMs = (params as any).beforeMs;
+        if (typeof typedParams.beforeMs === "number") {
+          filter.beforeMs = typedParams.beforeMs;
         }
-        if (typeof (params as any).limit === "number") {
-          filter.limit = Math.max(1, Math.min(500, (params as any).limit));
+        if (typeof typedParams.limit === "number") {
+          filter.limit = Math.max(1, Math.min(MAX_HISTORY_LIMIT, typedParams.limit));
         } else {
-          filter.limit = 50; // Default limit
+          filter.limit = DEFAULT_HISTORY_LIMIT;
         }
       } else {
-        filter.limit = 50;
+        filter.limit = DEFAULT_HISTORY_LIMIT;
       }
 
       const events = store.query(filter);
@@ -111,9 +140,10 @@ export const actionStreamHandlers: GatewayRequestHandlers = {
         initGlobalActionStreamAggregator().start();
       }
 
-      // Use client.connect.client.id as the client identifier
-      if (client?.connect?.client?.id) {
-        subscribeClientToActionStream(client.connect.client.id);
+      // Extract client ID and subscribe
+      const clientId = client?.connect?.client?.id;
+      if (clientId) {
+        subscribeClientToActionStream(clientId);
       }
 
       respond(true, { subscribed: true }, undefined);
@@ -128,9 +158,10 @@ export const actionStreamHandlers: GatewayRequestHandlers = {
    */
   "actionstream.unsubscribe": async ({ respond, context, client }) => {
     try {
-      // Use client.connect.client.id as the client identifier
-      if (client?.connect?.client?.id) {
-        unsubscribeClientFromActionStream(client.connect.client.id);
+      // Extract client ID and unsubscribe
+      const clientId = client?.connect?.client?.id;
+      if (clientId) {
+        unsubscribeClientFromActionStream(clientId);
       }
 
       respond(true, { subscribed: false }, undefined);
@@ -161,9 +192,9 @@ export const actionStreamHandlers: GatewayRequestHandlers = {
         byType[evt.type] = (byType[evt.type] ?? 0) + 1;
       }
 
-      // Get last 5 minutes
-      const fiveMinAgo = Date.now() - 5 * 60 * 1000;
-      const recent = allEvents.filter((e) => e.timestamp > fiveMinAgo);
+      // Get recent events within the stats window
+      const recentWindowStart = Date.now() - STATS_RECENT_WINDOW_MS;
+      const recent = allEvents.filter((e) => e.timestamp > recentWindowStart);
 
       respond(
         true,
@@ -191,7 +222,8 @@ export const actionStreamHandlers: GatewayRequestHandlers = {
         return;
       }
 
-      const runId = typeof params === "object" ? (params as any).runId : null;
+      const typedParams = typeof params === "object" ? (params as ActionStreamRunHistoryParams) : {};
+      const runId = typedParams.runId;
       if (!runId || typeof runId !== "string") {
         respond(false, undefined, errorShape(ErrorCodes.INVALID_REQUEST, "runId is required"));
         return;
@@ -211,17 +243,10 @@ export const actionStreamHandlers: GatewayRequestHandlers = {
   /**
    * Pause/resume a running agent (one-click inject control)
    */
-  "actionstream.pauseAgent": async ({ respond, context, params }) => {
+  "actionstream.pauseAgent": async ({ respond, context }) => {
     try {
-      const runId = typeof params === "object" ? (params as any).runId : null;
-      if (!runId) {
-        respond(false, undefined, errorShape(ErrorCodes.INVALID_REQUEST, "runId is required"));
-        return;
-      }
-
-      // This will integrate with existing agent.pause/abort functionality
-      // For now, return success
-      respond(true, { paused: true, runId }, undefined);
+      // Not yet implemented - will integrate with existing agent.pause/abort functionality
+      respond(false, undefined, errorShape(ErrorCodes.UNAVAILABLE, "Not yet implemented"));
     } catch (err) {
       context.logGateway.error(`actionstream.pauseAgent failed: ${formatForLog(err)}`);
       respond(false, undefined, errorShape(ErrorCodes.UNAVAILABLE, formatForLog(err)));
@@ -231,19 +256,10 @@ export const actionStreamHandlers: GatewayRequestHandlers = {
   /**
    * Inject a command into a running agent
    */
-  "actionstream.injectCommand": async ({ respond, context, params }) => {
+  "actionstream.injectCommand": async ({ respond, context }) => {
     try {
-      const runId = typeof params === "object" ? (params as any).runId : null;
-      const command = typeof params === "object" ? (params as any).command : null;
-
-      if (!runId || !command) {
-        respond(false, undefined, errorShape(ErrorCodes.INVALID_REQUEST, "runId and command are required"));
-        return;
-      }
-
-      // This will integrate with agent input injection
-      // For now, return success
-      respond(true, { injected: true, runId }, undefined);
+      // Not yet implemented - will integrate with agent input injection
+      respond(false, undefined, errorShape(ErrorCodes.UNAVAILABLE, "Not yet implemented"));
     } catch (err) {
       context.logGateway.error(`actionstream.injectCommand failed: ${formatForLog(err)}`);
       respond(false, undefined, errorShape(ErrorCodes.UNAVAILABLE, formatForLog(err)));
