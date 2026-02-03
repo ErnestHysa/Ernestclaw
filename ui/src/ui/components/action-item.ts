@@ -7,6 +7,8 @@
 
 import { html, nothing } from "lit";
 import { icon, type IconName } from "../icons.js";
+import type { GroupedAction } from "../app-action-stream.js";
+import { getTypeLabel, formatTimeRange, isGroupedAction } from "../app-action-stream.js";
 
 /**
  * Icon mapping for action types.
@@ -25,10 +27,19 @@ const ACTION_ICON_MAP: Record<string, IconName> = {
   "check": "check",
   "search": "search",
   "circle": "circle",
-  "activity": "zap",
+  "activity": "activity",
   "arrowDown": "messageSquare",
   "arrowUp": "messageSquare",
   "mouse": "monitor",
+  // Chevron icons for expandable groups
+  "chevronDown": "chevronDown",
+  "chevronRight": "chevronRight",
+  // Agent events
+  "assistant": "messageSquare",  // assistant messages
+  "lifecycle": "brain",        // agent lifecycle
+  "error": "x",                // agent error
+  // Token usage
+  "tokens": "zap",
 };
 
 const DEFAULT_ICON: IconName = "circle";
@@ -48,6 +59,28 @@ export interface ActionItemProps {
     runId?: string;
     sessionKey?: string;
   };
+}
+
+/**
+ * Grouped action - represents multiple collapsed actions of the same type
+ */
+export interface GroupedActionItemProps {
+  group: {
+    id: string;
+    type: string;
+    timestamp: number;
+    count: number;
+    oldestTimestamp: number;
+    newestTimestamp: number;
+    firstActionId: string;
+    lastActionId: string;
+    runId?: string;
+    actions: ActionItemProps["action"][];
+  };
+  expanded: boolean;
+  visibleCount?: number; // Number of actions to show when expanded (pagination)
+  onToggle: () => void;
+  onShowMore: () => void;
 }
 
 /**
@@ -182,4 +215,60 @@ function pauseAgent(runId: string): void {
     bubbles: true,
     composed: true
   }));
+}
+
+/**
+ * Render a grouped action item (collapsed multiple events)
+ * Uses pagination to avoid performance issues with large groups
+ */
+export function renderGroupedActionItem(props: GroupedActionItemProps) {
+  const { group, expanded, visibleCount = 5, onToggle, onShowMore } = props;
+  const iconKey = group.type.split('.')[1] || group.type;
+  const safeIconName: IconName = ACTION_ICON_MAP[iconKey] ?? DEFAULT_ICON;
+  const timeRange = formatTimeRange(group.oldestTimestamp, group.newestTimestamp);
+
+  // Determine label based on type
+  const typeLabel = getTypeLabel(group.type);
+  const countLabel = group.count === 1 ? typeLabel : `${group.count} ${typeLabel}s`;
+
+  // Only render visible actions for performance (pagination)
+  const visibleActions = group.actions.slice(0, visibleCount);
+  const hasMore = visibleCount < group.actions.length;
+  const remainingCount = group.actions.length - visibleCount;
+
+  return html`
+    <div class="action-item action-item--group" data-action-group="${group.id}">
+      <div class="action-item__header" @click=${onToggle}>
+        <div class="action-item__icon action-item__icon--group">
+          ${expanded ? icon('chevronDown') : icon('chevronRight')}
+        </div>
+        <div class="action-item__info">
+          <div class="action-item__title">${countLabel}</div>
+          <div class="action-item__time">${timeRange}</div>
+        </div>
+        <div class="action-item__status">
+          <span class="badge badge--info">group</span>
+        </div>
+      </div>
+
+      ${expanded ? html`
+        <div class="action-item__grouped-actions">
+          ${visibleActions.map(action => renderActionItem({ action }))}
+          ${hasMore ? html`
+            <button class="group-show-more-btn" @click=${(e) => { e.stopPropagation(); onShowMore(); }}>
+              Show ${Math.min(remainingCount, 5)} more... (${remainingCount} remaining)
+            </button>
+          ` : nothing}
+        </div>
+      ` : nothing}
+
+      ${group.runId && !expanded ? html`
+        <div class="action-item__actions">
+          <button class="btn btn--sm" @click=${(e) => { e.stopPropagation(); showRunDetails(group.runId!); }}>
+            ${icon('search')} View Run
+          </button>
+        </div>
+      ` : nothing}
+    </div>
+  `;
 }

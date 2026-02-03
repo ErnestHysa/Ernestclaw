@@ -63,7 +63,15 @@ const DEFAULT_ASK_FALLBACK: ExecSecurity = "deny";
 const DEFAULT_AUTO_ALLOW_SKILLS = false;
 const DEFAULT_SOCKET = "~/.openclaw/exec-approvals.sock";
 const DEFAULT_FILE = "~/.openclaw/exec-approvals.json";
-export const DEFAULT_SAFE_BINS = ["jq", "grep", "cut", "sort", "uniq", "head", "tail", "tr", "wc"];
+
+// Platform-aware safe bins - excludes Unix-only tools on Windows
+const getDefaultSafeBins = (): string[] => {
+  const unixBins = ["jq", "grep", "cut", "sort", "uniq", "head", "tail", "tr", "wc"];
+  const windowsBins = ["jq", "Select-String", "Select-Object", "Sort-Object", "Get-Unique", "Select-Object", "Select-Object", "Out-File"];
+  return process.platform === "win32" ? windowsBins : unixBins;
+};
+
+export const DEFAULT_SAFE_BINS = getDefaultSafeBins();
 
 function hashExecApprovalsRaw(raw: string | null): string {
   return crypto

@@ -25,11 +25,11 @@ export class ActionStreamPanel extends Container {
   constructor(props: ActionStreamPanelProps) {
     super();
     this.props = props;
-    this.render();
+    this.renderPanel();
     this.startAutoRefresh();
   }
 
-  private render(): void {
+  private renderPanel() {
     const { store } = this.props;
     const actions = store.getRecent(10);
 
@@ -64,7 +64,7 @@ export class ActionStreamPanel extends Container {
 
   private startAutoRefresh(): void {
     this.refreshInterval = setInterval(() => {
-      this.render();
+      this.renderPanel();
     }, 1000);
   }
 
@@ -79,8 +79,12 @@ export class ActionStreamPanel extends Container {
     this.stopAutoRefresh();
   }
 
-  update(): void {
-    this.render();
+  update(props?: ActionStreamPanelProps) {
+    if (props) {
+      this.props = props;
+    }
+    this.clear();
+    this.renderPanel();
   }
 
   /**
@@ -115,10 +119,8 @@ export class ActionStreamPanel extends Container {
    */
   getText(): string[] {
     return this.children
-      .filter((child): child is { render: (width: number) => string[] } =>
-        child && typeof child === "object" && "render" in child
-      )
-      .flatMap((child) => child.render(60));
+      .filter((child): child is Text => child instanceof Text)
+      .map((child) => child.toString());
   }
 }
 
@@ -164,6 +166,6 @@ export function formatActionPreview(action: ActionStreamEvent): string {
       return data.totalTokens ? `${data.totalTokens} tokens` : "tokens";
 
     default:
-      return "";
+      return `Unknown: ${action.type}`;
   }
 }

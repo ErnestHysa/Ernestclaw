@@ -3,12 +3,17 @@
  *
  * Displays all agent actions, cron runs, browser automation, skill invocations,
  * and channel events in a unified, filterable, real-time stream.
+ *
+ * Smart grouping: Repetitive events (assistant messages, token updates) are
+ * automatically grouped when consecutive, while important events (lifecycle,
+ * tool calls, errors) are always shown individually.
  */
 
 import { html, nothing } from "lit";
 import { icon } from "../icons.js";
 import type { AppViewState } from "../app-view-state.js";
-import { renderActionItem } from "../components/action-item.js";
+import { renderActionItem, renderGroupedActionItem } from "../components/action-item.js";
+import { filterActions, groupActions, type GroupedAction, type ActionDisplayItem, isGroupedAction } from "../app-action-stream.js";
 
 export interface ActionStreamProps {
   state: AppViewState;
@@ -61,7 +66,7 @@ export function renderActionStream(props: ActionStreamProps) {
   const { state } = props;
 
   // Extract action stream state from AppViewState (now properly typed)
-  const actions = state.actionStreamActions;
+  const allActions = state.actionStreamActions;
   const activeFilters = state.actionStreamFilters;
   const actionStats = state.actionStreamStats;
   const tokenUsage = state.actionStreamTokenUsage;
@@ -70,6 +75,15 @@ export function renderActionStream(props: ActionStreamProps) {
   const hasMoreActions = state.actionStreamHasMore;
   const loading = state.actionStreamLoading;
   const error = state.actionStreamError;
+  const selectedRunId = (state as { actionStreamSelectedRunId?: string | null }).actionStreamSelectedRunId ?? null;
+
+  // Apply filters to get actions to display
+  const actions = filterActions(allActions ?? [], activeFilters ?? ["all"]);
+
+  // Filter actions for the selected run (if any)
+  const runActions = selectedRunId
+    ? allActions?.filter(a => a.runId === selectedRunId) ?? []
+    : [];
 
   return html`
     <div class="action-stream">
@@ -82,7 +96,7 @@ export function renderActionStream(props: ActionStreamProps) {
         </div>
         <div class="action-stream__controls">
           <button class="btn btn--secondary btn--sm" @click=${() => refreshActionStream(state)}>
-            ${icon('search')} Refresh
+            Refresh
           </button>
           <button class="btn btn--primary btn--sm" @click=${() => toggleLiveMode(state)}>
             <span class="live-indicator ${liveEnabled ? 'live-indicator--active' : ''}"></span>
@@ -125,6 +139,9 @@ export function renderActionStream(props: ActionStreamProps) {
         ${!loading && actions.length > 0 ? renderActionsList(actions, hasMoreActions, state) : nothing}
       </section>
     </div>
+
+    <!-- Run Details Modal -->
+    ${selectedRunId ? renderRunDetailsModal(selectedRunId, runActions, state) : nothing}
   `;
 }
 
@@ -241,19 +258,84 @@ function renderEmptyState() {
 }
 
 /**
- * Render the list of actions
+ * Render the list of actions with smart grouping
  */
 function renderActionsList(actions: ActionDisplayFormat[], hasMore: boolean, state: AppViewState) {
+  // Get expanded groups from state
+  const expandedGroups = (state as { actionStreamExpandedGroups?: Set<string> }).actionStreamExpandedGroups ?? new Set<string>();
+  // Get visible count for each group (pagination)
+  const groupVisibleCounts = (state as { actionStreamGroupVisibleCounts?: Map<string, number> }).actionStreamGroupVisibleCounts ?? new Map<string, number>();
+
+  // Group actions to reduce clutter
+  const displayItems = groupActions(actions);
+
   return html`
     <div class="actions-list">
-      ${actions.map(action => renderActionItem({ action }))}
+      ${displayItems.map(item => {
+        if (isGroupedAction(item)) {
+          // Render grouped action with expand/collapse and pagination
+          const isExpanded = expandedGroups.has(item.id);
+          const visibleCount = groupVisibleCounts.get(item.id) ?? 5;
+          return renderGroupedActionItem({
+            group: item,
+            expanded: isExpanded,
+            visibleCount,
+            onToggle: () => toggleGroupExpanded(state, item.id),
+            onShowMore: () => showMoreGroupActions(state, item.id),
+          });
+        } else {
+          // Render individual action
+          return renderActionItem({ action: item });
+        }
+      })}
     </div>
     ${hasMore ? html`
       <button class="load-more-btn" @click=${() => loadMoreActions(state)}>
-        ${icon('loader')} Load More Actions
+        Load More Actions
       </button>
     ` : nothing}
   `;
+}
+
+/**
+ * Toggle a group's expanded state
+ */
+function toggleGroupExpanded(state: AppViewState, groupId: string): void {
+  const currentState = state as { actionStreamExpandedGroups?: Set<string> };
+  if (!currentState.actionStreamExpandedGroups) {
+    currentState.actionStreamExpandedGroups = new Set<string>();
+  }
+  const expandedGroups = currentState.actionStreamExpandedGroups;
+
+  if (expandedGroups.has(groupId)) {
+    expandedGroups.delete(groupId);
+  } else {
+    expandedGroups.add(groupId);
+  }
+  // Trigger re-render via custom event
+  dispatchEvent(new CustomEvent('actionstream-toggle-group', {
+    detail: { groupId },
+    bubbles: true,
+    composed: true
+  }));
+}
+
+/**
+ * Show more actions in a group (pagination)
+ */
+function showMoreGroupActions(state: AppViewState, groupId: string): void {
+  const countsState = state as { actionStreamGroupVisibleCounts?: Map<string, number> };
+  if (!countsState.actionStreamGroupVisibleCounts) {
+    countsState.actionStreamGroupVisibleCounts = new Map<string, number>();
+  }
+  const currentCount = countsState.actionStreamGroupVisibleCounts.get(groupId) ?? 5;
+  countsState.actionStreamGroupVisibleCounts.set(groupId, currentCount + 5);
+  // Trigger re-render
+  dispatchEvent(new CustomEvent('actionstream-show-more-group', {
+    detail: { groupId },
+    bubbles: true,
+    composed: true
+  }));
 }
 
 /**
@@ -287,4 +369,135 @@ function loadMoreActions(state: AppViewState): void {
     bubbles: true,
     composed: true
   }));
+}
+
+/**
+ * Render run details modal
+ */
+function renderRunDetailsModal(runId: string, runActions: ActionDisplayFormat[], state: AppViewState) {
+  // Group the run actions for better display
+  const displayItems = groupActions(runActions);
+
+  // Count by type
+  const typeCounts: Record<string, number> = {};
+  for (const action of runActions) {
+    typeCounts[action.type] = (typeCounts[action.type] || 0) + 1;
+  }
+
+  // Find lifecycle events
+  const lifecycleEvents = runActions.filter(a => a.type === 'agent.lifecycle');
+  const startEvent = lifecycleEvents.find(a => a.metadata?.phase === 'start');
+  const endEvent = lifecycleEvents.find(a => a.metadata?.phase === 'end' || a.metadata?.phase === 'error');
+
+  return html`
+    <div class="modal-overlay" @click=${() => closeRunModal(state)}>
+      <div class="modal modal--lg" @click=${(e: Event) => e.stopPropagation()}>
+        <div class="modal__header">
+          <h2 class="modal__title">Run Details</h2>
+          <button class="modal__close" @click=${() => closeRunModal(state)}>
+            ${icon('x')}
+          </button>
+        </div>
+        <div class="modal__body">
+          <!-- Run Info -->
+          <div class="run-details__info">
+            <div class="run-details__field">
+              <span class="run-details__label">Run ID</span>
+              <span class="run-details__value">${runId.slice(0, 16)}...</span>
+            </div>
+            ${startEvent ? html`
+              <div class="run-details__field">
+                <span class="run-details__label">Started</span>
+                <span class="run-details__value">${formatTimeAgo(startEvent.timestamp)}</span>
+              </div>
+            ` : nothing}
+            ${endEvent ? html`
+              <div class="run-details__field">
+                <span class="run-details__label">Status</span>
+                <span class="run-details__value run-details__value--${endEvent.status}">
+                  ${endEvent.metadata?.phase === 'error' ? 'Error' : 'Completed'}
+                </span>
+              </div>
+            ` : nothing}
+            <div class="run-details__field">
+              <span class="run-details__label">Total Actions</span>
+              <span class="run-details__value">${runActions.length}</span>
+            </div>
+          </div>
+
+          <!-- Type Breakdown -->
+          <div class="run-details__breakdown">
+            <h3 class="run-details__subtitle">Action Breakdown</h3>
+            <div class="run-details__types">
+              ${Object.entries(typeCounts).map(([type, count]) => html`
+                <div class="run-details__type">
+                  <span class="run-details__type-name">${getTypeLabel(type)}</span>
+                  <span class="run-details__type-count">${count}</span>
+                </div>
+              `)}
+            </div>
+          </div>
+
+          <!-- Actions Timeline -->
+          <div class="run-details__actions">
+            <h3 class="run-details__subtitle">Timeline</h3>
+            <div class="actions-list actions-list--compact">
+              ${displayItems.map(item => {
+                if (isGroupedAction(item)) {
+                  return html`
+                    <div class="run-details__grouped">
+                      <div class="run-details__group-header">
+                        ${icon('chevronRight')}
+                        <span>${item.count} ${getTypeLabel(item.type)}s</span>
+                      </div>
+                    </div>
+                  `;
+                } else {
+                  return html`
+                    <div class="run-details__action">
+                      <span class="run-details__action-time">${formatTimeAgo(item.timestamp)}</span>
+                      <span class="run-details__action-type">${getTypeLabel(item.type)}</span>
+                      <span class="run-details__action-title">${item.title}</span>
+                    </div>
+                  `;
+                }
+              })}
+            </div>
+          </div>
+        </div>
+        <div class="modal__footer">
+          <button class="btn btn--secondary" @click=${() => closeRunModal(state)}>Close</button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+/**
+ * Close run details modal
+ */
+function closeRunModal(state: AppViewState): void {
+  dispatchEvent(new CustomEvent('actionstream-close-run-modal', {
+    bubbles: true,
+    composed: true
+  }));
+}
+
+/**
+ * Format timestamp as "time ago" string (re-export from action-item)
+ */
+function formatTimeAgo(timestamp: number): string {
+  const seconds = Math.floor((Date.now() - timestamp) / 1000);
+
+  if (seconds < 10) return "just now";
+  if (seconds < 60) return `${seconds}s ago`;
+
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+
+  const days = Math.floor(hours / 24);
+  return `${days}d ago`;
 }

@@ -24,6 +24,7 @@ import {
   getGlobalActionStreamAggregator,
   initGlobalActionStreamAggregator,
 } from "../infra/action-stream.js";
+import { broadcastActionEvent } from "./server-methods/action-stream.js";
 import { onHeartbeatEvent } from "../infra/heartbeat-events.js";
 import { startHeartbeatRunner } from "../infra/heartbeat-runner.js";
 import { getMachineDisplayName } from "../infra/machine-name.js";
@@ -423,6 +424,11 @@ export async function startGatewayServer(
   const actionStreamAgg = initGlobalActionStreamAggregator();
   actionStreamAgg.start();
   logActionStream.info("action stream aggregator started");
+
+  // Set up broadcasting of action stream events to subscribed clients
+  actionStreamAgg.onAction((evt) => {
+    broadcastActionEvent({ broadcast }, evt);
+  });
 
   const execApprovalManager = new ExecApprovalManager();
   const execApprovalForwarder = createExecApprovalForwarder();

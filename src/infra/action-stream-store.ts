@@ -45,17 +45,21 @@ export function createActionStreamStore(opts: ActionStreamStoreOpts = {}): Actio
       }
     }
 
-    events.set(evt.id, evt);
+    // Update or add the event
     if (isNewEvent) {
+      events.set(evt.id, evt);
       insertionOrder.push(evt.id);
+    } else {
+      // Update existing event in place
+      events.set(evt.id, evt);
     }
 
     // Notify listeners
     for (const listener of listeners) {
       try {
         listener(evt);
-      } catch {
-        // Ignore listener errors
+      } catch (err) {
+        console.error(`[action-stream] listener error:`, err);
       }
     }
   };

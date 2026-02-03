@@ -78,6 +78,12 @@ import {
 } from "./app-channels";
 import type { NostrProfileFormState } from "./views/channels.nostr-profile-form";
 import { loadAssistantIdentity as loadAssistantIdentityInternal } from "./controllers/assistant-identity";
+import { 
+  logAction,
+  getSavedActivities,
+  clearActivityLog,
+  type ActivityLogEntry,
+} from "./app-action-stream";
 
 declare global {
   interface Window {
@@ -98,6 +104,9 @@ function resolveOnboardingMode(): boolean {
 
 @customElement("openclaw-app")
 export class OpenClawApp extends LitElement {
+  
+  private _actionStreamPollInterval: number | undefined;
+  
   @state() settings: UiSettings = loadSettings();
   @state() password = "";
   @state() tab: Tab = "chat";
@@ -247,6 +256,18 @@ export class OpenClawApp extends LitElement {
   @state() logsMaxBytes = 250_000;
   @state() logsAtBottom = true;
 
+  // Action Stream state
+  @state() actionStreamActions: import("./views/action-stream").ActionDisplayFormat[] = [];
+  @state() actionStreamFilters: string[] = ["all"];
+  @state() actionStreamStats: import("./views/action-stream").ActionStreamStats = { total: 0, byType: {}, recentCount: 0 };
+  @state() actionStreamTokenUsage: import("./views/action-stream").TokenUsageData = { total: 0, limit: 100000, cost: 0, byRun: {} };
+  @state() actionStreamShowTokenMeter = true;
+  @state() actionStreamLiveEnabled = false;
+  @state() actionStreamHasMore = false;
+  @state() actionStreamLoading = false;
+  @state() actionStreamError: string | null = null;
+  @state() actionStreamSelectedRunId: string | null = null;
+
   client: GatewayBrowserClient | null = null;
   private chatScrollFrame: number | null = null;
   private chatScrollTimeout: number | null = null;
@@ -274,6 +295,20 @@ export class OpenClawApp extends LitElement {
 
   connectedCallback() {
     super.connectedCallback();
+    
+    // Set up action stream event listeners
+    this.addEventListener("actionstream-refresh", this.handleActionStreamRefresh);
+    this.addEventListener("actionstream-toggle-live", this.handleActionStreamToggleLive);
+    this.addEventListener("actionstream-toggle-filter", this.handleActionStreamToggleFilter);
+    this.addEventListener("actionstream-load-more", this.handleActionStreamLoadMore);
+    this.addEventListener("actionstream-toggle-group", this.handleActionStreamToggleGroup);
+    this.addEventListener("actionstream-show-more-group", this.handleActionStreamShowMoreGroup);
+    this.addEventListener("actionstream-close-run-modal", this.handleCloseRunModal);
+    this.addEventListener("navigate-to-run", this.handleNavigateToRun);
+    this.addEventListener("pause-agent", this.handlePauseAgent);
+    
+    handleConnected(this as unknown as Parameters<typeof handleConnected>[0]);
+    
     handleConnected(this as unknown as Parameters<typeof handleConnected>[0]);
   }
 
@@ -284,6 +319,23 @@ export class OpenClawApp extends LitElement {
   disconnectedCallback() {
     handleDisconnected(this as unknown as Parameters<typeof handleDisconnected>[0]);
     super.disconnectedCallback();
+    
+    // Stop polling when disconnecting
+    if (this._actionStreamPollInterval) {
+      window.clearInterval(this._actionStreamPollInterval);
+      this._actionStreamPollInterval = undefined;
+    }
+    
+    // Remove action stream event listeners
+    this.removeEventListener("actionstream-refresh", this.handleActionStreamRefresh);
+    this.removeEventListener("actionstream-toggle-live", this.handleActionStreamToggleLive);
+    this.removeEventListener("actionstream-toggle-filter", this.handleActionStreamToggleFilter);
+    this.removeEventListener("actionstream-load-more", this.handleActionStreamLoadMore);
+    this.removeEventListener("actionstream-toggle-group", this.handleActionStreamToggleGroup);
+    this.removeEventListener("actionstream-show-more-group", this.handleActionStreamShowMoreGroup);
+    this.removeEventListener("actionstream-close-run-modal", this.handleCloseRunModal);
+    this.removeEventListener("navigate-to-run", this.handleNavigateToRun);
+    this.removeEventListener("pause-agent", this.handlePauseAgent);
   }
 
   protected updated(changed: Map<PropertyKey, unknown>) {
@@ -398,6 +450,112 @@ export class OpenClawApp extends LitElement {
 
   async handleWhatsAppLogout() {
     await handleWhatsAppLogoutInternal(this);
+  }
+  
+  // Action Stream event handlers
+  private async handleNavigateToRun(evt: Event): Promise<void> {
+    const customEvent = evt as CustomEvent<{ runId?: string }>;
+    const runId = customEvent.detail?.runId;
+
+    if (!runId) {
+      console.warn("[app] navigate-to-run event missing runId");
+      return;
+    }
+
+    console.log("[app] Viewing run:", runId);
+    // Open the run details modal
+    this.actionStreamSelectedRunId = runId;
+  }
+
+  private handleCloseRunModal(): void {
+    this.actionStreamSelectedRunId = null;
+  }
+  
+  private handlePauseAgent(evt: Event): void {
+    const customEvent = evt as CustomEvent<{ runId?: string }>;
+    const runId = customEvent.detail?.runId;
+
+    if (!runId) {
+      console.warn("[app] pause-agent event missing runId");
+      return;
+    }
+
+    console.log("[app] Pausing agent:", runId);
+    // TODO: Implement actual pause functionality via RPC call
+  }
+
+  // Action Stream methods
+  async loadActionStream() {
+    if (!this.client) return;
+    const { loadActionStream: load } = await import("./app-action-stream.js");
+    await load(this);
+  }
+
+  async loadMoreActionStream() {
+    if (!this.client) return;
+    const { loadMoreActionStream: loadMore } = await import("./app-action-stream.js");
+    await loadMore(this);
+  }
+
+  async toggleActionStreamLive(enabled?: boolean) {
+    const { toggleLiveMode } = await import("./app-action-stream.js");
+    toggleLiveMode(this, enabled);
+  }
+
+  async toggleActionStreamFilter(filter: string) {
+    const { toggleFilter } = await import("./app-action-stream.js");
+    toggleFilter(this, filter);
+  }
+
+  // Action Stream event handlers
+  private handleActionStreamRefresh(): void {
+    console.log("[app] Refreshing action stream");
+    void this.loadActionStream();
+  }
+
+  private handleActionStreamToggleLive(evt: Event): void {
+    const customEvent = evt as CustomEvent<{ enabled?: boolean }>;
+    const enabled = customEvent.detail?.enabled;
+    console.log("[app] Toggling live mode:", enabled ?? "toggle");
+    void this.toggleActionStreamLive(enabled);
+  }
+
+  private handleActionStreamToggleFilter(evt: Event): void {
+    const customEvent = evt as CustomEvent<{ filter?: string }>;
+    const filter = customEvent.detail?.filter;
+    if (!filter) {
+      console.warn("[app] actionstream-toggle-filter event missing filter");
+      return;
+    }
+    console.log("[app] Toggling filter:", filter);
+    this.toggleActionStreamFilter(filter);
+  }
+
+  private handleActionStreamLoadMore(): void {
+    console.log("[app] Loading more actions");
+    void this.loadMoreActionStream();
+  }
+
+  private handleActionStreamToggleGroup(event: Event): void {
+    const customEvent = event as CustomEvent<{ groupId?: string }>;
+    const groupId = customEvent.detail?.groupId;
+    if (!groupId) {
+      console.warn("[app] actionstream-toggle-group event missing groupId");
+      return;
+    }
+    // The state is already updated in the toggle function, just trigger a re-render
+    this.requestUpdate();
+  }
+
+  private handleActionStreamShowMoreGroup(event: Event): void {
+    const customEvent = event as CustomEvent<{ groupId?: string }>;
+    const groupId = customEvent.detail?.groupId;
+    if (!groupId) {
+      console.warn("[app] actionstream-show-more-group event missing groupId");
+      return;
+    }
+    // The state is already updated in the showMoreGroupActions function, just trigger a re-render
+    this.requestUpdate();
   }
 
   async handleChannelConfigSave() {

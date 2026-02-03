@@ -229,6 +229,7 @@ export function createCommandHandlers(context: CommandHandlerContext) {
 
   const openActionStream = () => {
     // Import dynamically to avoid circular dependency with action-stream-store
+    // @ts-expect-error - Module will exist at runtime after build
     import("../../infra/action-stream-store.js").then(({ getGlobalActionStreamStore }) => {
       const store = getGlobalActionStreamStore();
       if (!store) {

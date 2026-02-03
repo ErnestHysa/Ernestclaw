@@ -16,6 +16,7 @@ import {
   stopNodesPolling,
   startDebugPolling,
   stopDebugPolling,
+  loadActionStreamData,
 } from "./app-polling";
 
 type LifecycleHost = {
@@ -79,6 +80,11 @@ export function handleUpdated(
   host: LifecycleHost,
   changed: Map<PropertyKey, unknown>,
 ) {
+  // Load action stream data when switching to action-stream tab
+  if (host.tab === "action-stream" && changed.has("tab")) {
+    void loadActionStreamData(host as unknown as Parameters<typeof loadActionStreamData>[0]);
+  }
+
   if (
     host.tab === "chat" &&
     (changed.has("chatMessages") ||

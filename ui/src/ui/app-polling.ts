@@ -10,6 +10,13 @@ type PollingHost = {
   tab: string;
 };
 
+export async function loadActionStreamData(host: PollingHost) {
+  const app = host as unknown as OpenClawApp;
+  if (!app.client || !app.connected) return;
+  const { loadActionStream } = await import("./app-action-stream.js");
+  await loadActionStream(app);
+}
+
 export function startNodesPolling(host: PollingHost) {
   if (host.nodesPollInterval != null) return;
   host.nodesPollInterval = window.setInterval(

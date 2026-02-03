@@ -6,6 +6,7 @@ import {
   buildHelpMessage,
 } from "../status.js";
 import { buildStatusReply } from "./commands-status.js";
+import { buildQueueInfoReply } from "./commands-queueinfo.js";
 import { buildContextReply } from "./commands-context-report.js";
 import type { CommandHandler } from "./commands-types.js";
 
@@ -81,7 +82,7 @@ export function buildCommandsPaginationKeyboard(
   currentPage: number,
   totalPages: number,
   agentId?: string,
-): Array<Array<{ text: string; callback_data: string }>> {
+): Array<Array<{ text: string; callback_data: string }>> | undefined {
   const buttons: Array<{ text: string; callback_data: string }> = [];
   const suffix = agentId ? `:${agentId}` : "";
 
@@ -104,7 +105,7 @@ export function buildCommandsPaginationKeyboard(
     });
   }
 
-  return [buttons];
+  return buttons.length > 0 ? [buttons] : undefined;
 }
 
 export const handleStatusCommand: CommandHandler = async (params, allowTextCommands) => {
@@ -150,6 +151,27 @@ export const handleContextCommand: CommandHandler = async (params, allowTextComm
     return { shouldContinue: false };
   }
   return { shouldContinue: false, reply: await buildContextReply(params) };
+};
+
+export const handleQueueInfoCommand: CommandHandler = async (params, allowTextCommands) => {
+  if (!allowTextCommands) return null;
+  const normalized = params.command.commandBodyNormalized;
+
+  // Check if it's a /queueinfo command (with or without args)
+  if (!normalized.startsWith("/queueinfo")) return null;
+
+  if (!params.command.isAuthorizedSender) {
+    logVerbose(
+      `Ignoring /queueinfo from unauthorized sender: ${params.command.senderId || "<unknown>"}`,
+    );
+    return { shouldContinue: false };
+  }
+
+  // Parse args from command body
+  const parts = normalized.split(/\s+/);
+  const args = parts.slice(1); // Remove "/queueinfo"
+
+  return { shouldContinue: false, reply: await buildQueueInfoReply({ cfg: params.cfg, ctx: params.command, args }) };
 };
 
 export const handleWhoamiCommand: CommandHandler = async (params, allowTextCommands) => {

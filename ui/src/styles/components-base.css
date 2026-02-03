@@ -1,0 +1,540 @@
+/* ===========================================
+   Apple-Style Component Primitives
+   OpenClaw UI/UX Redesign
+   =========================================== */
+
+/* ===========================================
+   Card with Glass Effect
+   =========================================== */
+
+.card-apple {
+  background: var(--surface-glass);
+  backdrop-filter: var(--backdrop-blur);
+  -webkit-backdrop-filter: var(--backdrop-blur);
+  border: 1px solid var(--border-apple);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.04),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease,
+    transform 0.15s var(--ease-spring);
+}
+
+.card-apple:hover {
+  border-color: var(--border-apple-strong);
+  box-shadow:
+    0 4px 12px rgba(0, 0, 0, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.card-apple__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+.card-apple__title {
+  font: 600 15px var(--font-display);
+  letter-spacing: -0.02em;
+  color: var(--text-strong);
+}
+
+.card-apple__subtitle {
+  font: 400 13px var(--font-body);
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+.card-apple__body {
+  font: 400 14px var(--font-body);
+  color: var(--text);
+  line-height: 1.5;
+}
+
+.card-apple__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border-apple);
+}
+
+/* ===========================================
+   Buttons
+   =========================================== */
+
+.btn-apple {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border: none;
+  border-radius: var(--radius-md);
+  font: 500 13px var(--font-body);
+  letter-spacing: -0.01em;
+  cursor: pointer;
+  transition: all 0.15s var(--ease-spring);
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-apple:active {
+  transform: scale(0.97);
+}
+
+/* Primary button */
+.btn-apple-primary {
+  background: var(--accent);
+  color: white;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.btn-apple-primary:hover {
+  box-shadow:
+    0 4px 12px rgba(0, 0, 0, 0.15),
+    0 0 0 1px rgba(255, 255, 255, 0.1);
+}
+
+/* Secondary button */
+.btn-apple-secondary {
+  background: var(--secondary);
+  color: var(--text);
+  border: 1px solid var(--border-apple);
+}
+
+.btn-apple-secondary:hover {
+  background: var(--bg-hover);
+  border-color: var(--border-apple-strong);
+}
+
+/* Ghost button */
+.btn-apple-ghost {
+  background: transparent;
+  color: var(--accent);
+  padding: var(--space-2) var(--space-3);
+}
+
+.btn-apple-ghost:hover {
+  background: var(--accent-subtle);
+}
+
+/* Icon-only button */
+.btn-apple-icon {
+  padding: var(--space-2);
+  width: 36px;
+  height: 36px;
+}
+
+.btn-apple-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* Button sizes */
+.btn-apple-sm {
+  padding: var(--space-2) var(--space-3);
+  font: 500 12px var(--font-body);
+}
+
+.btn-apple-lg {
+  padding: var(--space-4) var(--space-6);
+  font: 500 14px var(--font-body);
+}
+
+/* ===========================================
+   Input Fields
+   =========================================== */
+
+.input-apple {
+  padding: var(--space-3) var(--space-3);
+  border: 1px solid var(--border-apple);
+  border-radius: var(--radius-md);
+  background: var(--card);
+  font: 400 14px var(--font-body);
+  color: var(--text);
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+  width: 100%;
+}
+
+.input-apple::placeholder {
+  color: var(--muted);
+}
+
+.input-apple:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(255, 92, 92, 0.15);
+}
+
+.input-apple:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Textarea */
+.textarea-apple {
+  min-height: 100px;
+  resize: vertical;
+  font-family: var(--font-body);
+  line-height: 1.5;
+}
+
+/* Select */
+.select-apple {
+  appearance: none;
+  padding-right: var(--space-10);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2371717a' stroke-width='2.5'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right var(--space-3) center;
+  cursor: pointer;
+}
+
+/* ===========================================
+   Badge/Pill Components
+   =========================================== */
+
+.badge-apple {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+  font: 500 11px var(--font-body);
+  letter-spacing: 0.02em;
+}
+
+.badge-apple-success {
+  background: rgba(34, 197, 94, 0.12);
+  color: var(--ok);
+}
+
+.badge-apple-warning {
+  background: rgba(245, 158, 11, 0.12);
+  color: var(--warn);
+}
+
+.badge-apple-error {
+  background: rgba(239, 68, 68, 0.12);
+  color: var(--danger);
+}
+
+.badge-apple-info {
+  background: rgba(59, 130, 246, 0.12);
+  color: var(--info);
+}
+
+.badge-apple-neutral {
+  background: var(--secondary);
+  color: var(--muted);
+}
+
+/* Badge with dot indicator */
+.badge-apple-dot {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.badge-apple-dot::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: var(--radius-full);
+  background: currentColor;
+}
+
+/* ===========================================
+   Status Indicators
+   =========================================== */
+
+.status-dot-apple {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+  position: relative;
+}
+
+.status-dot-apple.success {
+  background: var(--ok);
+}
+
+.status-dot-apple.warning {
+  background: var(--warn);
+}
+
+.status-dot-apple.error {
+  background: var(--danger);
+}
+
+.status-dot-apple.info {
+  background: var(--info);
+}
+
+/* Pulsing status dot */
+.status-dot-apple-pulse {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+  position: relative;
+}
+
+.status-dot-apple-pulse::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: var(--radius-full);
+  background: inherit;
+  opacity: 0.4;
+  animation: pulse-ring 2s ease-out infinite;
+}
+
+/* ===========================================
+   Toggle Switch
+   =========================================== */
+
+.toggle-apple {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 26px;
+}
+
+.toggle-apple__input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggle-apple__track {
+  position: absolute;
+  inset: 0;
+  background: var(--bg-muted);
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border-apple);
+  transition: all 0.2s var(--ease-spring);
+  cursor: pointer;
+}
+
+.toggle-apple__thumb {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
+  background: white;
+  border-radius: var(--radius-full);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+  transition: transform 0.2s var(--ease-spring);
+  cursor: pointer;
+}
+
+.toggle-apple__input:checked + .toggle-apple__track {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.toggle-apple__input:checked + .toggle-apple__track + .toggle-apple__thumb {
+  transform: translateX(18px);
+}
+
+/* ===========================================
+   Tooltip (CSS-only)
+   =========================================== */
+
+.tooltip-apple {
+  position: relative;
+}
+
+.tooltip-apple::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%) translateY(4px);
+  padding: 6px 10px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-apple);
+  border-radius: var(--radius-md);
+  font: 400 12px var(--font-body);
+  color: var(--text);
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease, transform 0.15s var(--ease-spring);
+  z-index: 100;
+}
+
+.tooltip-apple:hover::after {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* ===========================================
+   Divider
+   =========================================== */
+
+.divider-apple {
+  height: 1px;
+  background: var(--border-apple);
+  margin: var(--space-4) 0;
+}
+
+.divider-apple-vertical {
+  width: 1px;
+  height: auto;
+  background: var(--border-apple);
+  margin: 0 var(--space-4);
+}
+
+.divider-apple-with-label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin: var(--space-5) 0;
+}
+
+.divider-apple-with-label::before,
+.divider-apple-with-label::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border-apple);
+}
+
+.divider-apple-label {
+  font: 500 12px var(--font-body);
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* ===========================================
+   Avatar
+   =========================================== */
+
+.avatar-apple {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-full);
+  background: var(--bg-hover);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font: 500 14px var(--font-body);
+  color: var(--text);
+  overflow: hidden;
+}
+
+.avatar-apple img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.avatar-apple-sm {
+  width: 28px;
+  height: 28px;
+  font-size: 12px;
+}
+
+.avatar-apple-lg {
+  width: 48px;
+  height: 48px;
+  font-size: 16px;
+}
+
+/* ===========================================
+   Skeleton Loading
+   =========================================== */
+
+.skeleton-apple {
+  background: linear-gradient(
+    90deg,
+    var(--bg-muted) 0%,
+    var(--bg-hover) 50%,
+    var(--bg-muted) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer-apple 1.5s ease-in-out infinite;
+  border-radius: var(--radius-md);
+}
+
+.skeleton-apple-text {
+  height: 14px;
+  margin-bottom: 6px;
+}
+
+.skeleton-apple-text:last-child {
+  margin-bottom: 0;
+  width: 70%;
+}
+
+.skeleton-apple-circle {
+  border-radius: var(--radius-full);
+}
+
+/* ===========================================
+   Progress Bar
+   =========================================== */
+
+.progress-apple {
+  height: 4px;
+  background: var(--bg-muted);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+.progress-apple__fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: var(--radius-full);
+  transform-origin: left;
+  transition: transform 0.4s var(--ease-spring);
+}
+
+.progress-apple--indeterminate .progress-apple__fill {
+  width: 30%;
+  animation: progress-indeterminate 1.5s ease-in-out infinite;
+}
+
+@keyframes progress-indeterminate {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(400%);
+  }
+}
+
+/* ===========================================
+   Code Block
+   =========================================== */
+
+.code-block-apple {
+  font-family: var(--mono);
+  font-size: 13px;
+  line-height: 1.5;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-apple);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  overflow-x: auto;
+}
+
+.code-block-apple--inline {
+  display: inline;
+  padding: 2px 6px;
+  font-size: 0.9em;
+  border-radius: var(--radius-sm);
+}

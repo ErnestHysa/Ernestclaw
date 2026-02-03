@@ -64,8 +64,8 @@ export function createActionStreamAggregator(): ActionStreamAggregator {
     for (const listener of actionListeners) {
       try {
         listener(evt);
-      } catch {
-        // Ignore listener errors
+      } catch (err) {
+        console.error(`[action-stream-aggregator] listener error:`, err);
       }
     }
   };
