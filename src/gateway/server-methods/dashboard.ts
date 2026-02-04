@@ -81,19 +81,19 @@ export const dashboardHandlers: GatewayRequestHandlers = {
         }
       }
 
-      // Check provider summary for issues
-      if (status.providerSummary && Array.isArray(status.providerSummary)) {
-        const errorLines = status.providerSummary.filter(line =>
+      // Check channel summary for error indicators
+      if (status.channelSummary && Array.isArray(status.channelSummary)) {
+        const errorLines = status.channelSummary.filter((line: string) =>
           line.toLowerCase().includes("error") ||
           line.toLowerCase().includes("failed") ||
           line.toLowerCase().includes("disconnected")
         );
         for (const line of errorLines) {
           diagnostics.issues.push({
-            type: "provider",
-            severity: "error",
+            type: "channel",
+            severity: "warning",
             message: line,
-            suggestion: "Check provider logs for detailed error information",
+            suggestion: "Check channel logs for detailed error information",
           });
         }
       }
