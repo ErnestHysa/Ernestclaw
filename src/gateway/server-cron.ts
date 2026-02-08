@@ -10,6 +10,7 @@ import { runHeartbeatOnce } from "../infra/heartbeat-runner.js";
 import { requestHeartbeatNow } from "../infra/heartbeat-wake.js";
 import { enqueueSystemEvent } from "../infra/system-events.js";
 import { getChildLogger } from "../logging.js";
+import { getGlobalActionStreamAggregator } from "../infra/action-stream.js";
 import { normalizeAgentId } from "../routing/session-key.js";
 import { defaultRuntime } from "../runtime.js";
 
@@ -78,6 +79,11 @@ export function buildGatewayCronService(params: {
     log: getChildLogger({ module: "cron", storePath }),
     onEvent: (evt) => {
       params.broadcast("cron", evt, { dropIfSlow: true });
+      // Hook cron events into action stream
+      const actionStreamAgg = getGlobalActionStreamAggregator();
+      if (actionStreamAgg) {
+        actionStreamAgg.handleCronEvent(evt);
+      }
       if (evt.action === "finished") {
         const logPath = resolveCronRunLogPath({
           storePath,

@@ -13,6 +13,7 @@ import {
   createSearchableSelectList,
   createSettingsList,
 } from "./components/selectors.js";
+import { ActionStreamPanel } from "./components/action-stream-panel.js";
 import type { GatewayChatClient } from "./gateway-chat.js";
 import { formatStatusSummary } from "./tui-status-summary.js";
 import type {
@@ -226,6 +227,31 @@ export function createCommandHandlers(context: CommandHandlerContext) {
     tui.requestRender();
   };
 
+  const openActionStream = () => {
+    // Import dynamically to avoid circular dependency with action-stream-store
+    // @ts-expect-error - Module will exist at runtime after build
+    import("../../infra/action-stream-store.js").then(({ getGlobalActionStreamStore }) => {
+      const store = getGlobalActionStreamStore();
+      if (!store) {
+        chatLog.addSystem("Action stream not available. Is the gateway running?");
+        tui.requestRender();
+        return;
+      }
+      const panel = new ActionStreamPanel({
+        store,
+        onClose: () => {
+          closeOverlay();
+          tui.requestRender();
+        },
+      });
+      openOverlay(panel);
+      tui.requestRender();
+    }).catch(() => {
+      chatLog.addSystem("Failed to open action stream");
+      tui.requestRender();
+    });
+  };
+
   const handleCommand = async (raw: string) => {
     const { name, args } = parseCommand(raw);
     if (!name) return;
@@ -427,6 +453,9 @@ export function createCommandHandlers(context: CommandHandlerContext) {
       case "settings":
         openSettings();
         break;
+      case "stream":
+        openActionStream();
+        break;
       case "exit":
       case "quit":
         client.stop();
@@ -468,6 +497,7 @@ export function createCommandHandlers(context: CommandHandlerContext) {
     openAgentSelector,
     openSessionSelector,
     openSettings,
+    openActionStream,
     setAgent,
   };
 }

@@ -2,6 +2,8 @@ import { getImageMetadata, resizeToJpeg } from "../media/image-ops.js";
 
 export const DEFAULT_BROWSER_SCREENSHOT_MAX_SIDE = 2000;
 export const DEFAULT_BROWSER_SCREENSHOT_MAX_BYTES = 5 * 1024 * 1024;
+/** Default JPEG quality for browser screenshots (0-100) */
+export const DEFAULT_BROWSER_SCREENSHOT_JPEG_QUALITY = 85;
 
 export async function normalizeBrowserScreenshot(
   buffer: Buffer,
@@ -22,7 +24,7 @@ export async function normalizeBrowserScreenshot(
     return { buffer };
   }
 
-  const qualities = [85, 75, 65, 55, 45, 35];
+  const qualities = [DEFAULT_BROWSER_SCREENSHOT_JPEG_QUALITY, 75, 65, 55, 45, 35];
   const sideStart = maxDim > 0 ? Math.min(maxSide, maxDim) : maxSide;
   const sideGrid = [sideStart, 1800, 1600, 1400, 1200, 1000, 800]
     .map((v) => Math.min(maxSide, v))

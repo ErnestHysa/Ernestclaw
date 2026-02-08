@@ -10,6 +10,7 @@ import {
   handleCommandsListCommand,
   handleContextCommand,
   handleHelpCommand,
+  handleQueueInfoCommand,
   handleStatusCommand,
   handleWhoamiCommand,
 } from "./commands-info.js";
@@ -45,6 +46,7 @@ const HANDLERS: CommandHandler[] = [
   handleHelpCommand,
   handleCommandsListCommand,
   handleStatusCommand,
+  handleQueueInfoCommand,
   handleAllowlistCommand,
   handleApproveCommand,
   handleContextCommand,

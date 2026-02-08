@@ -1,14 +1,14 @@
 /* ===========================================
-   Shell Layout
+   Shell Layout - Apple-Inspired
    =========================================== */
 
 .shell {
   --shell-pad: 16px;
   --shell-gap: 16px;
-  --shell-nav-width: 220px;
+  --shell-nav-width: 240px;
   --shell-topbar-height: 56px;
-  --shell-focus-duration: 200ms;
-  --shell-focus-ease: var(--ease-out);
+  --shell-focus-duration: 250ms;
+  --shell-focus-ease: var(--ease-spring-smooth);
   height: 100vh;
   display: grid;
   grid-template-columns: var(--shell-nav-width) minmax(0, 1fr);
@@ -17,7 +17,7 @@
     "topbar topbar"
     "nav content";
   gap: 0;
-  animation: dashboard-enter 0.4s var(--ease-out);
+  animation: spring-in-smooth 0.5s var(--ease-spring-smooth) backwards;
   transition: grid-template-columns var(--shell-focus-duration) var(--shell-focus-ease);
   overflow: hidden;
 }
@@ -188,15 +188,16 @@
 }
 
 /* ===========================================
-   Navigation Sidebar
+   Navigation Sidebar - Apple-Inspired
    =========================================== */
 
 .nav {
   grid-area: nav;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 16px 12px;
-  background: var(--bg);
+  padding: var(--space-4) var(--space-3);
+  background: var(--surface-glass-dark);
+  border-right: 1px solid var(--border-apple);
   scrollbar-width: none; /* Firefox */
   transition:
     width var(--shell-focus-duration) var(--shell-focus-ease),
@@ -294,26 +295,28 @@
   display: none;
 }
 
-/* Nav label */
+/* Nav label - Apple-style with collapse animation */
 .nav-label {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: var(--space-2);
   width: 100%;
-  padding: 6px 10px;
+  padding: var(--space-1-5) var(--space-2-5);
   font-size: 11px;
-  font-weight: 500;
+  font-weight: 600;
   color: var(--muted);
-  margin-bottom: 4px;
+  margin-bottom: var(--space-1);
   background: transparent;
   border: none;
   cursor: pointer;
   text-align: left;
   border-radius: var(--radius-sm);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
   transition:
-    color var(--duration-fast) ease,
-    background var(--duration-fast) ease;
+    color var(--duration-fast) var(--ease-spring),
+    background var(--duration-fast) var(--ease-spring);
 }
 
 .nav-label:hover {
@@ -337,21 +340,26 @@
 .nav-label__chevron {
   font-size: 10px;
   opacity: 0.5;
-  transition: transform var(--duration-fast) ease;
+  transition: transform var(--duration-normal) var(--ease-spring);
 }
 
 .nav-group--collapsed .nav-label__chevron {
   transform: rotate(-90deg);
 }
 
-/* Nav items */
+/* Animate nav items when group expands */
+.nav-group__items {
+  animation: slide-in-bottom 0.3s var(--ease-spring);
+}
+
+/* Nav items - Apple-style with active indicator */
 .nav-item {
   position: relative;
   display: flex;
   align-items: center;
   justify-content: flex-start;
-  gap: 10px;
-  padding: 8px 10px;
+  gap: var(--space-2-5);
+  padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-md);
   border: 1px solid transparent;
   background: transparent;
@@ -359,9 +367,28 @@
   cursor: pointer;
   text-decoration: none;
   transition:
-    border-color var(--duration-fast) ease,
-    background var(--duration-fast) ease,
-    color var(--duration-fast) ease;
+    border-color var(--duration-fast) var(--ease-spring),
+    background var(--duration-fast) var(--ease-spring),
+    color var(--duration-fast) var(--ease-spring),
+    transform var(--duration-fast) var(--ease-spring);
+}
+
+/* Active state indicator (left border) */
+.nav-item::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%) scaleY(0);
+  width: 3px;
+  height: 20px;
+  background: var(--accent);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  transition: transform var(--duration-normal) var(--ease-spring);
+}
+
+.nav-item.active::before {
+  transform: translateY(-50%) scaleY(1);
 }
 
 .nav-item__icon {
@@ -372,7 +399,8 @@
   justify-content: center;
   flex-shrink: 0;
   opacity: 0.7;
-  transition: opacity var(--duration-fast) ease;
+  transition: opacity var(--duration-fast) var(--ease-spring),
+              transform var(--duration-fast) var(--ease-spring);
 }
 
 .nav-item__icon svg {
@@ -389,16 +417,19 @@
   font-size: 13px;
   font-weight: 500;
   white-space: nowrap;
+  letter-spacing: -0.01em;
 }
 
 .nav-item:hover {
   color: var(--text);
   background: var(--bg-hover);
   text-decoration: none;
+  transform: translateX(2px);
 }
 
 .nav-item:hover .nav-item__icon {
   opacity: 1;
+  transform: scale(1.05);
 }
 
 .nav-item.active {
@@ -411,19 +442,29 @@
   color: var(--accent);
 }
 
+.nav-item:active {
+  transform: translateX(1px) scale(0.98);
+}
+
 /* ===========================================
-   Content Area
+   Content Area - With Page Transitions
    =========================================== */
 
 .content {
   grid-area: content;
-  padding: 12px 16px 32px;
+  padding: var(--space-3) var(--space-4) var(--space-8);
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: var(--space-6);
   min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
+  /* Page transition animation */
+  animation: slide-in-right 0.4s var(--ease-spring-smooth) backwards;
+}
+
+.content.page-exit {
+  animation: page-exit 0.2s var(--ease-spring-smooth) forwards;
 }
 
 :root[data-theme="light"] .content {

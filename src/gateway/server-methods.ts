@@ -1,4 +1,5 @@
 import { ErrorCodes, errorShape } from "./protocol/index.js";
+import { actionStreamHandlers } from "./server-methods/action-stream.js";
 import { agentHandlers } from "./server-methods/agent.js";
 import { agentsHandlers } from "./server-methods/agents.js";
 import { browserHandlers } from "./server-methods/browser.js";
@@ -7,6 +8,7 @@ import { chatHandlers } from "./server-methods/chat.js";
 import { configHandlers } from "./server-methods/config.js";
 import { connectHandlers } from "./server-methods/connect.js";
 import { cronHandlers } from "./server-methods/cron.js";
+import { dashboardHandlers } from "./server-methods/dashboard.js";
 import { deviceHandlers } from "./server-methods/devices.js";
 import { execApprovalsHandlers } from "./server-methods/exec-approvals.js";
 import { healthHandlers } from "./server-methods/health.js";
@@ -72,6 +74,14 @@ const READ_METHODS = new Set([
   "node.list",
   "node.describe",
   "chat.history",
+  // Dashboard methods
+  "dashboard.status",
+  "dashboard.quickStats",
+  "dashboard.healthSnapshot",
+  // Action stream methods
+  "actionstream.history",
+  "actionstream.stats",
+  "actionstream.runHistory",
 ]);
 const WRITE_METHODS = new Set([
   "send",
@@ -88,6 +98,14 @@ const WRITE_METHODS = new Set([
   "chat.send",
   "chat.abort",
   "browser.request",
+  // Dashboard write methods
+  "dashboard.probeChannels",
+  "dashboard.runDiagnostics",
+  // Action stream write methods
+  "actionstream.subscribe",
+  "actionstream.unsubscribe",
+  "actionstream.pauseAgent",
+  "actionstream.injectCommand",
 ]);
 
 function authorizeGatewayMethod(method: string, client: GatewayRequestOptions["client"]) {
@@ -171,6 +189,8 @@ export const coreGatewayHandlers: GatewayRequestHandlers = {
   ...agentHandlers,
   ...agentsHandlers,
   ...browserHandlers,
+  ...dashboardHandlers,
+  ...actionStreamHandlers,
 };
 
 export async function handleGatewayRequest(

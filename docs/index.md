@@ -220,6 +220,10 @@ Example:
   - [Gmail hooks (Pub/Sub)](/automation/gmail-pubsub)
   - [Security](/gateway/security)
   - [Troubleshooting](/gateway/troubleshooting)
+- New Features:
+  - [**Live Action Stream**](/action-stream) — Real-time system activity monitoring ("God View")
+  - [**Terminal UI (TUI)**](/tui) — Comprehensive TUI documentation
+  - [**Auto-Reply System**](/auto-reply) — Automatic responses to channel messages
 
 ## The name
 

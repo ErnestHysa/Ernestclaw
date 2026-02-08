@@ -64,14 +64,15 @@ function registerAlias(commands: ChatCommandDefinition[], key: string, ...aliase
     throw new Error(`registerAlias: unknown command key: ${key}`);
   }
   const existing = new Set(command.textAliases.map((alias) => alias.trim().toLowerCase()));
+  const newAliases = [...existing];
   for (const alias of aliases) {
     const trimmed = alias.trim();
     if (!trimmed) continue;
     const lowered = trimmed.toLowerCase();
     if (existing.has(lowered)) continue;
-    existing.add(lowered);
-    command.textAliases.push(trimmed);
+    newAliases.push(lowered);
   }
+  command.textAliases = newAliases;
 }
 
 function assertCommandRegistry(commands: ChatCommandDefinition[]): void {
@@ -552,6 +553,13 @@ function buildChatCommands(): ChatCommandDefinition[] {
       ],
       argsParsing: "none",
       formatArgs: COMMAND_ARG_FORMATTERS.queue,
+    }),
+    defineChatCommand({
+      key: "queueinfo",
+      nativeName: "queueinfo",
+      description: "Show queue status and pending items.",
+      textAlias: "/queueinfo",
+      category: "status",
     }),
     defineChatCommand({
       key: "bash",

@@ -45,16 +45,22 @@ export function createInboundDebouncer<T>(params: {
   const debounceMs = Math.max(0, Math.trunc(params.debounceMs));
 
   const flushBuffer = async (key: string, buffer: DebounceBuffer<T>) => {
-    buffers.delete(key);
     if (buffer.timeout) {
       clearTimeout(buffer.timeout);
       buffer.timeout = null;
     }
-    if (buffer.items.length === 0) return;
+    if (buffer.items.length === 0) {
+      buffers.delete(key);
+      return;
+    }
     try {
       await params.onFlush(buffer.items);
+      // Only delete buffer after successful flush
+      buffers.delete(key);
     } catch (err) {
       params.onError?.(err, buffer.items);
+      // On error, keep the buffer to allow retry or manual intervention
+      // Buffer will be cleaned up on next successful flush or timeout
     }
   };
 

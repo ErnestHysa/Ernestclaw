@@ -30,6 +30,7 @@ The onboarding wizard generates a gateway token by default, so paste it here on 
 ## What it can do (today)
 - Chat with the model via Gateway WS (`chat.history`, `chat.send`, `chat.abort`, `chat.inject`)
 - Stream tool calls + live tool output cards in Chat (agent events)
+- **Action Stream: Live "God View" of all system activity** (`actionstream.*`) - See all agent actions, cron runs, browser automation, skill invocations, and channel events in real-time
 - Channels: WhatsApp/Telegram/Discord/Slack + plugin channels (Mattermost, etc.) status + QR login + per-channel config (`channels.status`, `web.login.*`, `config.patch`)
 - Instances: presence list + refresh (`system-presence`)
 - Sessions: list + per-session thinking/verbose overrides (`sessions.list`, `sessions.patch`)
@@ -44,6 +45,75 @@ The onboarding wizard generates a gateway token by default, so paste it here on 
 - Debug: status/health/models snapshots + event log + manual RPC calls (`status`, `health`, `models.list`)
 - Logs: live tail of gateway file logs with filter/export (`logs.tail`)
 - Update: run a package/git update + restart (`update.run`) with a restart report
+
+## Tabs & Views
+
+The Control UI is organized into tabs:
+
+| Tab | Description |
+|-----|-------------|
+| **Chat** | Main chat interface with the agent |
+| **Overview** | System status, nodes, and quick stats |
+| **Channels** | Channel status, configuration, and QR codes |
+| **Sessions** | Session management and overrides |
+| **Cron** | Cron job management and run history |
+| **Skills** | Skill status, installation, and configuration |
+| **Instances** | Node presence and capabilities |
+| **Exec Approvals** | Manage execution approval policies |
+| **Config** | View and edit configuration |
+| **Debug** | Status, health, event log, and RPC tools |
+| **Logs** | Live log tail with filters |
+| **Action Stream** | Real-time system activity monitoring |
+
+## Action Stream Tab
+
+The **Action Stream** tab provides a live "God View" of all system activity:
+
+### Features
+
+- **Real-time updates**: Auto-refreshes when Live mode is enabled
+- **Category filters**: Filter by Agent, Cron, Browser, Skills, or Channels
+- **Statistics dashboard**: Quick counts by action type
+- **Token usage tracking**: Monitor token consumption and costs
+- **Screenshot previews**: View browser automation screenshots
+- **Load more**: Paginate through older actions
+
+### Filters
+
+| Filter | Shows |
+|--------|-------|
+| **All** | All action types |
+| **Agent** | Agent lifecycle, tool calls, token usage |
+| **Cron** | Cron job starts, finishes, errors |
+| **Browser** | Screenshots, navigation, interactions |
+| **Skills** | Skill invocations and completions |
+| **Channels** | Channel messages and status changes |
+
+### Live Mode
+
+Toggle **Live** button to enable/disable real-time updates:
+- **Live**: Stream updates every 2 seconds
+- **Paused**: Stop automatic updates
+
+### Gateway API
+
+The Action Stream uses these Gateway methods:
+
+```javascript
+// Get recent actions
+actionstream.history({ limit, types, runId, sessionKey, afterMs, beforeMs })
+
+// Get statistics
+actionstream.stats()
+
+// Subscribe to real-time updates
+actionstream.subscribe()
+
+// Get events for a specific run
+actionstream.runHistory({ runId })
+```
+
+See [Action Stream Documentation](/action-stream) for full details.
 
 ## Chat behavior
 

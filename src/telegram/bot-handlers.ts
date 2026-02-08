@@ -1,5 +1,6 @@
 // @ts-nocheck
 import { hasControlCommand } from "../auto-reply/command-detection.js";
+import { shouldSkipProcessing } from "../auto-reply/reply/abort.js";
 import {
   createInboundDebouncer,
   resolveInboundDebounceMs,
@@ -7,6 +8,7 @@ import {
 import { buildCommandsPaginationKeyboard } from "../auto-reply/reply/commands-info.js";
 import { buildCommandsMessagePaginated } from "../auto-reply/status.js";
 import { listSkillCommandsForAgents } from "../auto-reply/skill-commands.js";
+import { getAdaptiveDebounceMs, recordMessage as recordPatternMessage } from "../auto-reply/reply/adaptive-debounce.js";
 import { resolveDefaultAgentId } from "../agents/agent-scope.js";
 import { loadConfig } from "../config/config.js";
 import { writeConfigFile } from "../config/io.js";
@@ -23,6 +25,12 @@ import { readTelegramAllowFromStore } from "./pairing-store.js";
 import { resolveChannelConfigWrites } from "../channels/plugins/config-writes.js";
 import { buildInlineKeyboard } from "./send.js";
 
+const mergeState = new Map<string, {
+  startTime: number;
+  messageCount: number;
+  lastUpdate: number;
+}>();
+
 export const registerTelegramHandlers = ({
   cfg,
   accountId,
@@ -38,11 +46,20 @@ export const registerTelegramHandlers = ({
   processMessage,
   logger,
 }) => {
+  const MERGE_CONFIG = {
+    maxGapMs: 3000,              // 3 seconds (more generous than 1500ms)
+    maxParts: 20,                // Increased from 12 to 20
+    maxTotalChars: 100000,       // Increased from 50000 to 100000
+    triggerMinCount: 3,          // Only merge if 3+ messages
+    showMergeStatus: true,       // Visual feedback during merge
+  };
+
   const TELEGRAM_TEXT_FRAGMENT_START_THRESHOLD_CHARS = 4000;
-  const TELEGRAM_TEXT_FRAGMENT_MAX_GAP_MS = 1500;
+  const TELEGRAM_TEXT_FRAGMENT_MAX_GAP_MS = MERGE_CONFIG.maxGapMs;
   const TELEGRAM_TEXT_FRAGMENT_MAX_ID_GAP = 1;
-  const TELEGRAM_TEXT_FRAGMENT_MAX_PARTS = 12;
-  const TELEGRAM_TEXT_FRAGMENT_MAX_TOTAL_CHARS = 50_000;
+  const TELEGRAM_TEXT_FRAGMENT_MAX_PARTS = MERGE_CONFIG.maxParts;
+  const TELEGRAM_TEXT_FRAGMENT_MAX_TOTAL_CHARS = MERGE_CONFIG.maxTotalChars;
+  const TELEGRAM_TEXT_FRAGMENT_MIN_PARTS = MERGE_CONFIG.triggerMinCount;
 
   const mediaGroupBuffer = new Map<string, MediaGroupEntry>();
   let mediaGroupProcessing: Promise<void> = Promise.resolve();
@@ -54,6 +71,40 @@ export const registerTelegramHandlers = ({
   };
   const textFragmentBuffer = new Map<string, TextFragmentEntry>();
   let textFragmentProcessing: Promise<void> = Promise.resolve();
+
+  function updateMergeState(chatId: number, action: 'start' | 'update' | 'complete', messageCount?: number) {
+    const state = mergeState.get(String(chatId)) || {
+      startTime: Date.now(),
+      messageCount: 0,
+      lastUpdate: Date.now(),
+    };
+
+    if (action === 'start' && messageCount && messageCount > 1) {
+      logVerbose(`Telegram merge started for ${chatId}: ${messageCount} messages`);
+    }
+
+    state.messageCount = (state.messageCount || 0) + (messageCount || 1);
+    state.lastUpdate = Date.now();
+    mergeState.set(String(chatId), state);
+  }
+
+  async function showMergeStatus(chatId: number, count: number) {
+    if (!MERGE_CONFIG.showMergeStatus) return;
+
+    try {
+      await bot.api.sendChatAction(chatId, 'typing');
+    } catch (err) {
+      // Silently fail - don't block the merge
+    }
+  }
+
+  function shouldMergeText(text?: string): boolean {
+    if (!text) return false;
+    const trimmed = text.trim();
+
+    // Must be long enough to be considered a paste (500+ chars)
+    return trimmed.length >= 500;
+  }
 
   const debounceMs = resolveInboundDebounceMs({ cfg, channel: "telegram" });
   type TelegramDebounceEntry = {
@@ -76,15 +127,37 @@ export const registerTelegramHandlers = ({
     onFlush: async (entries) => {
       const last = entries.at(-1);
       if (!last) return;
+
+      // Extract chat ID for abort check and merge state tracking
+      const lastMsg = last.msg as TelegramMessage;
+      const chatId = lastMsg.chat?.id;
+
+      // Check if session was recently aborted before processing
+      if (chatId && shouldSkipProcessing(String(chatId))) {
+        logVerbose(`Skipping debounce merge for ${chatId}: session in abort cooldown`);
+        return;
+      }
+
       if (entries.length === 1) {
         await processMessage(last.ctx, last.allMedia, last.storeAllowFrom);
         return;
       }
+
+      // Update merge state for visual feedback (multi-message merge)
+      if (chatId && entries.length > 1) {
+        updateMergeState(chatId, 'start', entries.length);
+        await showMergeStatus(chatId, entries.length);
+      }
+
       const combinedText = entries
         .map((entry) => entry.msg.text ?? entry.msg.caption ?? "")
         .filter(Boolean)
         .join("\n");
-      if (!combinedText.trim()) return;
+      if (!combinedText.trim()) {
+        if (chatId) updateMergeState(chatId, 'complete');
+        return;
+      }
+
       const first = entries[0];
       const baseCtx = first.ctx as { me?: unknown; getFile?: unknown } & Record<string, unknown>;
       const getFile =
@@ -104,6 +177,9 @@ export const registerTelegramHandlers = ({
         first.storeAllowFrom,
         messageIdOverride ? { messageIdOverride } : undefined,
       );
+
+      // Complete merge state
+      if (chatId) updateMergeState(chatId, 'complete');
     },
     onError: (err) => {
       runtime.error?.(danger(`telegram debounce flush failed: ${String(err)}`));
@@ -164,6 +240,20 @@ export const registerTelegramHandlers = ({
       const baseCtx = first.ctx as { me?: unknown; getFile?: unknown } & Record<string, unknown>;
       const getFile =
         typeof baseCtx.getFile === "function" ? baseCtx.getFile.bind(baseCtx) : async () => ({});
+
+      // Check if session was recently aborted
+      const chatId = (first.msg as { chat?: { id?: number } }).chat?.id;
+      if (chatId && shouldSkipProcessing(String(chatId))) {
+        logVerbose(`Skipping merge for ${chatId}: session in abort cooldown`);
+        return;
+      }
+
+      // Show merge status for multi-message merges
+      if (entry.messages.length > 1) {
+        updateMergeState(chatId, 'start', entry.messages.length);
+        await showMergeStatus(chatId, entry.messages.length);
+        updateMergeState(chatId, 'complete');
+      }
 
       await processMessage(
         { message: syntheticMessage, me: baseCtx.me, getFile },
@@ -345,6 +435,11 @@ export const registerTelegramHandlers = ({
           page,
           surface: "telegram",
         });
+
+        if (result.currentPage > result.totalPages) {
+          logVerbose(`Pagination page ${page} exceeds total pages ${result.totalPages}`);
+          return;
+        }
 
         const keyboard =
           result.totalPages > 1
@@ -534,10 +629,13 @@ export const registerTelegramHandlers = ({
       }
 
       // Text fragment handling - Telegram splits long pastes into multiple inbound messages (~4096 chars).
-      // We buffer “near-limit” messages and append immediately-following parts.
+      // We buffer "near-limit" messages and append immediately-following parts.
       const text = typeof msg.text === "string" ? msg.text : undefined;
       const isCommandLike = (text ?? "").trim().startsWith("/");
       if (text && !isCommandLike) {
+        // Record message for adaptive debounce pattern learning
+        recordPatternMessage(String(chatId), Date.now());
+
         const nowMs = Date.now();
         const senderId = msg.from?.id != null ? String(msg.from.id) : "unknown";
         const key = `text:${chatId}:${resolvedThreadId ?? "main"}:${senderId}`;
@@ -587,9 +685,9 @@ export const registerTelegramHandlers = ({
           const entry: TextFragmentEntry = {
             key,
             messages: [{ msg, ctx, receivedAtMs: nowMs }],
-            timer: setTimeout(() => {}, TELEGRAM_TEXT_FRAGMENT_MAX_GAP_MS),
+            timer: null,
           };
-          textFragmentBuffer.set(key, entry);
+          textFragmentBuffer.set(entry.key, entry);
           scheduleTextFragmentFlush(entry);
           return;
         }

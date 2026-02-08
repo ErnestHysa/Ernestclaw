@@ -29,6 +29,11 @@ import type {
 import type { DevicePairingList } from "./controllers/devices";
 import type { ExecApprovalRequest } from "./controllers/exec-approval";
 import type { NostrProfileFormState } from "./views/channels.nostr-profile-form";
+import type {
+  ActionDisplayFormat,
+  ActionStreamStats,
+  TokenUsageData,
+} from "./views/action-stream";
 
 export type AppViewState = {
   settings: UiSettings;
@@ -146,6 +151,15 @@ export type AppViewState = {
   logsLevelFilters: Record<LogLevel, boolean>;
   logsAutoFollow: boolean;
   logsTruncated: boolean;
+  actionStreamActions: ActionDisplayFormat[];
+  actionStreamFilters: string[];
+  actionStreamStats: ActionStreamStats;
+  actionStreamTokenUsage: TokenUsageData;
+  actionStreamShowTokenMeter: boolean;
+  actionStreamLiveEnabled: boolean;
+  actionStreamHasMore: boolean;
+  actionStreamLoading: boolean;
+  actionStreamError: string | null;
   client: GatewayBrowserClient | null;
   connect: () => void;
   setTab: (tab: Tab) => void;

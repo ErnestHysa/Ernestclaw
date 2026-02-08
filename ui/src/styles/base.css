@@ -1,12 +1,66 @@
 @import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap");
 
 :root {
+  /* ===========================================
+     Apple-Inspired Design Tokens
+     Spring Physics Configuration
+     =========================================== */
+
+  /* Spring Physics Config (stiffness, damping, mass) */
+  --spring-snappy: 500, 30, 1;
+  --spring-bouncy: 300, 15, 1.2;
+  --spring-smooth: 100, 20, 1;
+
+  /* Backdrop Blur */
+  --backdrop-blur: blur(20px);
+  --backdrop-blur-sm: blur(12px);
+
+  /* Apple-style Borders */
+  --border-apple: rgba(255, 255, 255, 0.08);
+  --border-apple-strong: rgba(255, 255, 255, 0.12);
+
+  /* Elevated Surfaces (Glass Effect) */
+  --surface-glass: rgba(26, 29, 37, 0.8);
+  --surface-glass-dark: rgba(18, 20, 26, 0.9);
+
+  /* Spacing - 4px Grid System */
+  --space-0: 0px;
+  --space-0-5: 2px;
+  --space-1: 4px;
+  --space-1-5: 6px;
+  --space-2: 8px;
+  --space-2-5: 10px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --space-20: 80px;
+
+  /* Border Radius - Apple Style */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 18px;
+  --radius-2xl: 22px;
+  --radius-3xl: 28px;
+  --radius-full: 9999px;
+
+  /* ===========================================
+     Original Design Tokens (Enhanced)
+     =========================================== */
+
   /* Background - Warmer dark with depth */
   --bg: #12141a;
   --bg-accent: #14161d;
   --bg-elevated: #1a1d25;
   --bg-hover: #262a35;
   --bg-muted: #262a35;
+  --bg-content: #1a1d25;
 
   /* Card / Surface - More contrast between levels */
   --card: #181b22;
@@ -104,6 +158,7 @@
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
   --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-spring-smooth: cubic-bezier(0.16, 1, 0.3, 1);
   --duration-fast: 120ms;
   --duration-normal: 200ms;
   --duration-slow: 350ms;
@@ -113,6 +168,15 @@
 
 /* Light theme - Clean with subtle warmth */
 :root[data-theme="light"] {
+  /* Apple-style Borders (Light Mode) */
+  --border-apple: rgba(0, 0, 0, 0.08);
+  --border-apple-strong: rgba(0, 0, 0, 0.12);
+
+  /* Elevated Surfaces (Glass Effect - Light) */
+  --surface-glass: rgba(255, 255, 255, 0.75);
+  --surface-glass-dark: rgba(250, 250, 250, 0.85);
+
+  /* Background - Light theme colors */
   --bg: #fafafa;
   --bg-accent: #f5f5f5;
   --bg-elevated: #ffffff;
@@ -183,6 +247,9 @@
   --shadow-lg: 0 12px 28px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(0, 0, 0, 0.04);
   --shadow-xl: 0 24px 48px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0, 0, 0, 0.04);
   --shadow-glow: 0 0 24px var(--accent-glow);
+
+  /* Transitions - Light theme */
+  --ease-spring-smooth: cubic-bezier(0.16, 1, 0.3, 1);
 
   color-scheme: light;
 }
@@ -357,13 +424,19 @@ select {
   }
 }
 
-/* Stagger animation delays for grouped elements */
+/* Stagger animation delays for grouped elements (40ms increments) */
 .stagger-1 { animation-delay: 0ms; }
-.stagger-2 { animation-delay: 50ms; }
-.stagger-3 { animation-delay: 100ms; }
-.stagger-4 { animation-delay: 150ms; }
-.stagger-5 { animation-delay: 200ms; }
-.stagger-6 { animation-delay: 250ms; }
+.stagger-2 { animation-delay: 40ms; }
+.stagger-3 { animation-delay: 80ms; }
+.stagger-4 { animation-delay: 120ms; }
+.stagger-5 { animation-delay: 160ms; }
+.stagger-6 { animation-delay: 200ms; }
+.stagger-7 { animation-delay: 240ms; }
+.stagger-8 { animation-delay: 280ms; }
+.stagger-9 { animation-delay: 320ms; }
+.stagger-10 { animation-delay: 360ms; }
+.stagger-11 { animation-delay: 400ms; }
+.stagger-12 { animation-delay: 440ms; }
 
 /* Focus visible styles */
 :focus-visible {

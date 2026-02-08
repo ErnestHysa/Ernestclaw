@@ -4,6 +4,7 @@ import type { CanvasHostHandler, CanvasHostServer } from "../canvas-host/server.
 import { type ChannelId, listChannelPlugins } from "../channels/plugins/index.js";
 import { stopGmailWatcher } from "../hooks/gmail-watcher.js";
 import type { HeartbeatRunner } from "../infra/heartbeat-runner.js";
+import { getGlobalActionStreamAggregator } from "../infra/action-stream.js";
 import type { PluginServicesHandle } from "../plugins/services.js";
 
 export function createGatewayCloseHandler(params: {
@@ -69,6 +70,11 @@ export function createGatewayCloseHandler(params: {
     }
     await stopGmailWatcher();
     params.cron.stop();
+    // Stop action stream aggregator
+    const actionStreamAgg = getGlobalActionStreamAggregator();
+    if (actionStreamAgg) {
+      actionStreamAgg.stop();
+    }
     params.heartbeatRunner.stop();
     for (const timer of params.nodePresenceTimers.values()) {
       clearInterval(timer);

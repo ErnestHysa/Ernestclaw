@@ -16,6 +16,12 @@ import {
   refreshActiveTab,
   setLastActiveSessionKey,
 } from "./app-settings";
+import { handleActionStreamEvent } from "./app-action-stream";
+import { loadActionStreamData } from "./app-polling";
+import type {
+  ActionDisplayFormat,
+  ActionStreamStats,
+} from "./views/action-stream";
 import { handleChatEvent, type ChatEventPayload } from "./controllers/chat";
 import {
   addExecApproval,
@@ -54,6 +60,9 @@ type GatewayHost = {
   refreshSessionsAfterChat: boolean;
   execApprovalQueue: ExecApprovalRequest[];
   execApprovalError: string | null;
+  // Action stream state
+  actionStreamActions: ActionDisplayFormat[];
+  actionStreamStats: ActionStreamStats;
 };
 
 type SessionDefaultsSnapshot = {
@@ -140,6 +149,10 @@ export function connectGateway(host: GatewayHost) {
       void loadNodes(host as unknown as OpenClawApp, { quiet: true });
       void loadDevices(host as unknown as OpenClawApp, { quiet: true });
       void refreshActiveTab(host as unknown as Parameters<typeof refreshActiveTab>[0]);
+      // Load action stream data if on action-stream tab when connection established
+      if (host.tab === "action-stream") {
+        void loadActionStreamData(host as unknown as Parameters<typeof loadActionStreamData>[0]);
+      }
     },
     onClose: ({ code, reason }) => {
       host.connected = false;
@@ -243,6 +256,13 @@ function handleGatewayEventUnsafe(host: GatewayHost, evt: GatewayEventFrame) {
     if (resolved) {
       host.execApprovalQueue = removeExecApproval(host.execApprovalQueue, resolved.id);
     }
+  }
+
+  if (evt.event === "actionstream.event") {
+    handleActionStreamEvent(
+      host as unknown as Parameters<typeof handleActionStreamEvent>[0],
+      evt,
+    );
   }
 }
 

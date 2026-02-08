@@ -40,7 +40,9 @@ import { renderInstances } from "./views/instances";
 import { renderLogs } from "./views/logs";
 import { renderNodes } from "./views/nodes";
 import { renderOverview } from "./views/overview";
+import { renderDashboard } from "./views/dashboard";
 import { renderSessions } from "./views/sessions";
+import { renderActionStream } from "./views/action-stream";
 import { renderExecApprovalPrompt } from "./views/exec-approval";
 import { renderGatewayUrlConfirmation } from "./views/gateway-url-confirmation";
 import {
@@ -206,6 +208,12 @@ export function renderApp(state: AppViewState) {
           </div>
         </section>
 
+        ${state.tab === "dashboard"
+          ? renderDashboard({
+              state,
+            })
+          : nothing}
+
         ${state.tab === "overview"
           ? renderOverview({
               connected: state.connected,
@@ -233,6 +241,12 @@ export function renderApp(state: AppViewState) {
               },
               onConnect: () => state.connect(),
               onRefresh: () => state.loadOverview(),
+            })
+          : nothing}
+
+        ${state.tab === "action-stream"
+          ? renderActionStream({
+              state,
             })
           : nothing}
 

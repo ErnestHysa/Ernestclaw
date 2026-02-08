@@ -1,4 +1,5 @@
 import { appendCdpPath, fetchJson, isLoopbackHost, withCdpSocket } from "./cdp.helpers.js";
+import { DEFAULT_BROWSER_SCREENSHOT_JPEG_QUALITY } from "./screenshot.js";
 
 export { appendCdpPath, fetchJson, fetchOk, getHeadersWithAuth } from "./cdp.helpers.js";
 
@@ -60,7 +61,9 @@ export async function captureScreenshot(opts: {
 
     const format = opts.format ?? "png";
     const quality =
-      format === "jpeg" ? Math.max(0, Math.min(100, Math.round(opts.quality ?? 85))) : undefined;
+      format === "jpeg"
+        ? Math.max(0, Math.min(100, Math.round(opts.quality ?? DEFAULT_BROWSER_SCREENSHOT_JPEG_QUALITY)))
+        : undefined;
 
     const result = (await send("Page.captureScreenshot", {
       format,
